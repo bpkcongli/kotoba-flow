@@ -15,10 +15,10 @@
 - [x] `ARCH-05` Buat sequence diagram untuk `Flashcard answer -> progress event -> mastery snapshot update`. Lihat [sequence-diagram/flashcard-and-answer-evaluation.md](./sequence-diagram/flashcard-and-answer-evaluation.md) dan [sequence-diagram/update-progress-snapshot.md](./sequence-diagram/update-progress-snapshot.md).
 - [x] `ARCH-06` Buat sequence diagram untuk `Generate random questions -> answer submission -> grading -> progress update`. Lihat [sequence-diagram/random-question-generator-and-answer-evaluation.md](./sequence-diagram/random-question-generator-and-answer-evaluation.md) dan [sequence-diagram/update-progress-snapshot.md](./sequence-diagram/update-progress-snapshot.md).
 - [x] `ARCH-07` Buat sequence diagram untuk `Personalization assessment -> AI normalization -> user confirmation -> learner profile update`. Lihat [sequence-diagram/personalization-assessment-ai-normalization-user-confirmation-learner-profile-update.md](./sequence-diagram/personalization-assessment-ai-normalization-user-confirmation-learner-profile-update.md).
-- [ ] `ARCH-08` Susun ERD untuk auth dan user profile: `users`, `accounts`, `sessions`, `learner_profiles`.
-- [ ] `ARCH-09` Susun ERD untuk syllabus domain: `tracks`, `units`, `lessons`, `skills`, `unit_skill_mappings`.
-- [ ] `ARCH-10` Susun ERD untuk learning activity: `flashcard_decks`, `flashcard_items`, `practice_sessions`, `practice_questions`, `practice_answers`, `progress_events`, `skill_mastery_snapshots`.
-- [ ] `ARCH-11` Susun ERD untuk AI support dan observability minimum bila diperlukan: `ai_request_logs` atau tabel/log sink setara.
+- [x] `ARCH-08` Susun ERD untuk auth dan user profile: `users`, `accounts`, `sessions`, `learner_profiles`. Lihat [erd/auth-and-user-profile.md](./erd/auth-and-user-profile.md).
+- [x] `ARCH-09` Susun ERD untuk syllabus domain: `tracks`, `units`, `lessons`, `skills`, `unit_skill_mappings`. Lihat [erd/syllabus-domain.md](./erd/syllabus-domain.md).
+- [x] `ARCH-10` Susun ERD untuk learning activity: `flashcard_decks`, `flashcard_items`, `practice_sessions`, `practice_questions`, `practice_answers`, `progress_events`, `skill_mastery_snapshots`. Lihat [erd/learning-activity.md](./erd/learning-activity.md).
+- [x] `ARCH-11` Susun ERD untuk AI support dan observability minimum bila diperlukan: `ai_request_logs` atau tabel/log sink setara. Lihat [erd/ai-support-and-observability.md](./erd/ai-support-and-observability.md).
 - [ ] `ARCH-12` Draft OpenAPI/Swagger base document: metadata, auth scheme, error response format, pagination/query convention.
 - [ ] `ARCH-13` Definisikan Swagger contract untuk endpoint syllabus dan personalization.
 - [ ] `ARCH-14` Definisikan Swagger contract untuk endpoint flashcard, practice, dan progress tracking.
