@@ -170,7 +170,7 @@ Kemampuan atomik yang benar-benar di-track mastery-nya oleh sistem.
 | `curriculum_level` | `varchar(50)` | not null | Level kurikulum skill. Tetap bisa diisi `N5`, `N4`, atau taxonomy lain bila model level berubah. |
 | `title` | `varchar(255)` | not null | Nama tampilan skill. |
 | `description` | `text` | null | Deskripsi singkat skill. |
-| `skill_type` | `varchar(50)` | not null | Kategori skill, mis. `kana`, `vocabulary`, `grammar`, `reading`. |
+| `skill_type` | `varchar(50)` | not null | Kategori skill, mis. `KANA`, `VOCABULARY`, `GRAMMAR`, `READING`. |
 | `supports_flashcards` | `boolean` | not null default `false` | Menandai skill yang cocok untuk deck flashcard. |
 | `supports_practice_objective` | `boolean` | not null default `false` | Menandai skill yang cocok untuk soal deterministik/objective. |
 | `supports_practice_free_response` | `boolean` | not null default `false` | Menandai skill yang cocok untuk short free-response. |

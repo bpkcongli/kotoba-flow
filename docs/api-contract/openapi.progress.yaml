@@ -49,7 +49,7 @@ paths:
                   developingSkillsCount: 9
                   weakSkillsCount: 5
                   averageMasteryScore: 56.8
-                  recommendedDifficultyBand: standard
+                  recommendedDifficultyBand: STANDARD
                   lastActivityAt: '2026-04-04T10:20:00Z'
                   trackSummaries:
                     - trackSlug: jlpt-n5-foundation
@@ -97,10 +97,10 @@ paths:
         - name: sourceTypes
           in: query
           required: false
-          description: Filter multi-value dengan separated commas, mis. flashcard,practice.
+          description: Filter multi-value dengan separated commas, mis. FLASHCARD,PRACTICE.
           schema:
             type: string
-            example: flashcard,practice
+            example: FLASHCARD,PRACTICE
         - name: trackSlug
           in: query
           required: false
@@ -126,9 +126,9 @@ paths:
                     totalRecords: 2
                 data:
                   progressSessions:
-                    - sourceType: flashcard
+                    - sourceType: FLASHCARD
                       sourceSessionId: 770e8400-e29b-41d4-a716-446655440222
-                      sessionStatus: completed
+                      sessionStatus: COMPLETED
                       sessionTitle: N5 Kana Foundation
                       trackSlug: jlpt-n5-foundation
                       unitSlug: n5-kana-basics
@@ -192,10 +192,10 @@ paths:
         - name: sourceTypes
           in: query
           required: false
-          description: Filter multi-value dengan separated commas, mis. flashcard,practice.
+          description: Filter multi-value dengan separated commas, mis. FLASHCARD,PRACTICE.
           schema:
             type: string
-            example: flashcard,practice
+            example: FLASHCARD,PRACTICE
         - name: skillCodes
           in: query
           required: false
@@ -228,10 +228,10 @@ paths:
                 data:
                   progressEvents:
                     - id: 770e8400-e29b-41d4-a716-446655440222
-                      sourceType: flashcard
+                      sourceType: FLASHCARD
                       sourceSessionId: 880e8400-e29b-41d4-a716-446655440333
                       sourceEntityId: 990e8400-e29b-41d4-a716-446655440444
-                      questionType: hiragana_character
+                      questionType: HIRAGANA_CHARACTER
                       skillCode: hiragana_basic
                       skillTitle: Hiragana Basics
                       trackSlug: jlpt-n5-foundation
@@ -464,8 +464,8 @@ components:
         sourceType:
           type: string
           enum:
-            - flashcard
-            - practice
+            - FLASHCARD
+            - PRACTICE
         sourceSessionId:
           type: string
           format: uuid
@@ -553,8 +553,8 @@ components:
         sourceType:
           type: string
           enum:
-            - flashcard
-            - practice
+            - FLASHCARD
+            - PRACTICE
         sourceSessionId:
           type: string
           format: uuid

@@ -45,21 +45,21 @@ paths:
                   errorDetails: []
                 data:
                   id: 770e8400-e29b-41d4-a716-446655440222
-                  status: generated
-                  difficultyBand: standard
+                  status: GENERATED
+                  difficultyBand: STANDARD
                   questionMix:
-                    weak: 0.6
-                    reinforcement: 0.3
-                    stretch: 0.1
+                    WEAK: 0.6
+                    REINFORCEMENT: 0.3
+                    STRETCH: 0.1
                   totalQuestions: 5
                   answeredQuestionsCount: 0
                   startedAt: '2026-04-04T10:00:00Z'
                   questions:
                     - id: 880e8400-e29b-41d4-a716-446655440333
                       skillCode: n5_particles_wa_ga_o
-                      questionType: multiple_choice
-                      gradingStrategy: deterministic
-                      difficultyBand: standard
+                      questionType: MULTIPLE_CHOICE
+                      gradingStrategy: DETERMINISTIC
+                      difficultyBand: STANDARD
                       promptText: Choose the correct particle.
                       promptPayload:
                         options:
@@ -148,9 +148,9 @@ paths:
                   isCorrect: true
                   numericScore: 100
                   feedbackText: Correct particle choice.
-                  gradingSource: rule_engine
+                  gradingSource: RULE_ENGINE
                   gradingMetadata:
-                    gradingStrategy: deterministic
+                    gradingStrategy: DETERMINISTIC
                     matchedAnswerKeys:
                       - selectedOption
                     accepted: true
@@ -163,8 +163,8 @@ paths:
                     progressEventId: bb0e8400-e29b-41d4-a716-446655440666
                     skillCode: n5_particles_wa_ga_o
                     masteryScore: 58.4
-                    masteryState: developing
-                    recommendedDifficultyBand: standard
+                    masteryState: DEVELOPING
+                    recommendedDifficultyBand: STANDARD
         '401':
           description: Session tidak ada atau tidak valid.
           content:
@@ -277,15 +277,15 @@ components:
       type: object
       additionalProperties: false
       required:
-        - weak
-        - reinforcement
-        - stretch
+        - WEAK
+        - REINFORCEMENT
+        - STRETCH
       properties:
-        weak:
+        WEAK:
           type: number
-        reinforcement:
+        REINFORCEMENT:
           type: number
-        stretch:
+        STRETCH:
           type: number
     PracticeQuestion:
       type: object
@@ -310,8 +310,8 @@ components:
         gradingStrategy:
           type: string
           enum:
-            - deterministic
-            - ai
+            - DETERMINISTIC
+            - AI
         difficultyBand:
           type: string
         promptText:
@@ -340,10 +340,10 @@ components:
         status:
           type: string
           enum:
-            - generated
-            - in_progress
-            - completed
-            - expired
+            - GENERATED
+            - IN_PROGRESS
+            - COMPLETED
+            - EXPIRED
         difficultyBand:
           type: string
         questionMix:
@@ -382,7 +382,9 @@ components:
           format: uuid
         userAnswer:
           type: object
-          additionalProperties: true
+          additionalProperties: false
+          example:
+            selectedOption: wa
         responseTimeMs:
           type: integer
           nullable: true
@@ -461,8 +463,8 @@ components:
         gradingSource:
           type: string
           enum:
-            - rule_engine
-            - ai_provider
+            - RULE_ENGINE
+            - AI_PROVIDER
         gradingMetadata:
           $ref: '#/components/schemas/PracticeGradingMetadata'
         sessionProgress:

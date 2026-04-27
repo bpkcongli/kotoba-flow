@@ -64,7 +64,7 @@ Success response:
     "developingSkillsCount": 9,
     "weakSkillsCount": 5,
     "averageMasteryScore": 56.8,
-    "recommendedDifficultyBand": "standard",
+    "recommendedDifficultyBand": "STANDARD",
     "lastActivityAt": "2026-04-04T10:20:00Z",
     "trackSummaries": [
       {
@@ -89,7 +89,7 @@ Query params:
 | --- | --- | --- | --- |
 | `offset` | `integer` | no | Zero-based record offset. Default `0`. |
 | `limit` | `integer` | no | Max records per page. Default `10`. |
-| `sourceTypes` | `string` | no | Filter multi-value dengan separated commas, mis. `flashcard,practice`. |
+| `sourceTypes` | `string` | no | Filter multi-value dengan separated commas, mis. `FLASHCARD,PRACTICE`. |
 | `skillCodes` | `string` | no | Filter multi-value dengan separated commas. |
 | `trackSlug` | `string` | no | Filter ke satu track tertentu. |
 
@@ -119,10 +119,10 @@ Success response:
     "progressEvents": [
       {
         "id": "uuid",
-        "sourceType": "flashcard",
+        "sourceType": "FLASHCARD",
         "sourceSessionId": "uuid",
         "sourceEntityId": "uuid",
-        "questionType": "hiragana_character",
+        "questionType": "HIRAGANA_CHARACTER",
         "skillCode": "hiragana_basic",
         "skillTitle": "Hiragana Basics",
         "trackSlug": "jlpt-n5-foundation",
@@ -148,7 +148,7 @@ Query params:
 | --- | --- | --- | --- |
 | `offset` | `integer` | no | Zero-based record offset. Default `0`. |
 | `limit` | `integer` | no | Max records per page. Default `10`. |
-| `sourceTypes` | `string` | no | Filter multi-value dengan separated commas, mis. `flashcard,practice`. |
+| `sourceTypes` | `string` | no | Filter multi-value dengan separated commas, mis. `FLASHCARD,PRACTICE`. |
 | `trackSlug` | `string` | no | Filter ke satu track tertentu. |
 
 Behavior:
@@ -177,9 +177,9 @@ Success response:
   "data": {
     "progressSessions": [
       {
-        "sourceType": "flashcard",
+        "sourceType": "FLASHCARD",
         "sourceSessionId": "uuid",
-        "sessionStatus": "completed",
+        "sessionStatus": "COMPLETED",
         "sessionTitle": "N5 Kana Foundation",
         "trackSlug": "jlpt-n5-foundation",
         "unitSlug": "n5-kana-basics",

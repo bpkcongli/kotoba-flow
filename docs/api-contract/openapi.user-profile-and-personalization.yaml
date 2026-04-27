@@ -91,10 +91,10 @@ paths:
                   errorDetails: []
                 data:
                   draftProfile:
-                    currentLevel: jlpt_n5
-                    targetLevel: jlpt_n4
+                    currentLevel: JLPT_N5
+                    targetLevel: JLPT_N4
                     dailyGoalMinutes: 20
-                    preferredScript: mixed
+                    preferredScript: MIXED
                     weakSkillFocuses:
                       - particles
                       - listening
@@ -126,14 +126,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                status:
-                  traceId: 550e8400-e29b-41d4-a716-446655440000
-                  code: 142203001
-                  message: Invalid personalization assessment payload.
-                  errorDetails:
-                    - field: targetLevel
-                      message: Target level is not valid in the syllabus catalog.
+              examples:
+                invalidPayload:
+                  summary: Generic payload validation
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142203001
+                      message: Validation error.
+                      errorDetails:
+                        - field: dailyGoalMinutes
+                          message: dailyGoalMinutes must be an integer.
+                invalidSyllabusReference:
+                  summary: Business rule validation for syllabus reference
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142203002
+                      message: Invalid personalization assessment payload.
+                      errorDetails:
+                        - field: targetLevel
+                          message: Target level is not valid in the syllabus catalog.
   /personalization/assessment/confirm:
     post:
       tags:
@@ -173,10 +186,10 @@ paths:
                     onboardingCompleted: true
                     accessState: APP_READY
                     learnerProfile:
-                      currentLevel: jlpt_n5
-                      targetLevel: jlpt_n4
+                      currentLevel: JLPT_N5
+                      targetLevel: JLPT_N4
                       dailyGoalMinutes: 20
-                      preferredScript: mixed
+                      preferredScript: MIXED
                       weakSkillFocuses:
                         - particles
                         - listening
@@ -205,14 +218,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                status:
-                  traceId: 550e8400-e29b-41d4-a716-446655440000
-                  code: 142203001
-                  message: Invalid personalization confirmation payload.
-                  errorDetails:
-                    - field: knownSkillClaims
-                      message: Known skill claims must be an array of valid skill codes.
+              examples:
+                invalidPayload:
+                  summary: Generic payload validation
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142203001
+                      message: Validation error.
+                      errorDetails:
+                        - field: knownSkillClaims
+                          message: knownSkillClaims must be an array of strings.
+                invalidSyllabusReference:
+                  summary: Business rule validation for syllabus reference
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142203002
+                      message: Invalid personalization confirmation payload.
+                      errorDetails:
+                        - field: knownSkillClaims
+                          message: One or more knownSkillClaims values are not valid skill codes.
 components:
   securitySchemes:
     cookieAuth:
@@ -275,10 +301,10 @@ components:
         currentLevel:
           type: string
           nullable: true
-          example: jlpt_n5
+          example: JLPT_N5
         targetLevel:
           type: string
-          example: jlpt_n4
+          example: JLPT_N4
         dailyGoalMinutes:
           type: integer
           minimum: 1
@@ -286,9 +312,9 @@ components:
         preferredScript:
           type: string
           enum:
-            - romaji
-            - kana
-            - mixed
+            - ROMAJI
+            - KANA
+            - MIXED
         weakSkillFocuses:
           type: array
           items:
@@ -359,10 +385,10 @@ components:
         currentLevel:
           type: string
           nullable: true
-          example: jlpt_n5
+          example: JLPT_N5
         targetLevel:
           type: string
-          example: jlpt_n4
+          example: JLPT_N4
         dailyGoalMinutes:
           type: integer
           minimum: 1
@@ -370,10 +396,10 @@ components:
         preferredScript:
           type: string
           enum:
-            - romaji
-            - kana
-            - mixed
-          example: mixed
+            - ROMAJI
+            - KANA
+            - MIXED
+          example: MIXED
         weakSkillFocuses:
           type: array
           items:
@@ -486,10 +512,10 @@ components:
         currentLevel:
           type: string
           nullable: true
-          example: jlpt_n5
+          example: JLPT_N5
         targetLevel:
           type: string
-          example: jlpt_n4
+          example: JLPT_N4
         dailyGoalMinutes:
           type: integer
           minimum: 1
@@ -497,10 +523,10 @@ components:
         preferredScript:
           type: string
           enum:
-            - romaji
-            - kana
-            - mixed
-          example: mixed
+            - ROMAJI
+            - KANA
+            - MIXED
+          example: MIXED
         weakSkillFocuses:
           type: array
           items:

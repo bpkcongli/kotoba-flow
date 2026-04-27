@@ -100,7 +100,7 @@ Tabel linkage antara user internal dan provider OAuth.
 | --- | --- | --- | --- |
 | `id` | `char(36)` | PK | Internal account-link id. |
 | `user_id` | `char(36)` | FK -> `users.id`, not null | Owner account. |
-| `provider` | `varchar(50)` | not null | Contoh awal: `google`. |
+| `provider` | `varchar(50)` | not null | Contoh awal: `GOOGLE`. |
 | `provider_account_id` | `varchar(255)` | not null | Subject/account id dari provider. |
 | `provider_email` | `varchar(255)` | null | Salinan email provider untuk audit/debug auth. |
 | `access_token` | `text` | null | Opsional, tergantung kebutuhan adapter/provider. |
@@ -141,10 +141,10 @@ State profile belajar final milik context `users`, diisi setelah onboarding diko
 | --- | --- | --- | --- |
 | `id` | `char(36)` | PK | Internal learner profile id. |
 | `user_id` | `char(36)` | FK -> `users.id`, UK, not null | Menjamin satu user maksimal punya satu learner profile aktif. |
-| `current_level` | `varchar(50)` | null | Level awal yang dirasa user, mis. `beginner`, `jlpt_n5`. |
+| `current_level` | `varchar(50)` | null | Level awal yang dirasa user, mis. `BEGINNER`, `JLPT_N5`. |
 | `target_level` | `varchar(50)` | not null | Target utama learner. |
 | `daily_goal_minutes` | `int` | not null | Target belajar harian dalam menit. |
-| `preferred_script` | `varchar(50)` | not null | Preferensi script utama, mis. `romaji`, `kana`, `mixed`. |
+| `preferred_script` | `varchar(50)` | not null | Preferensi script utama, mis. `ROMAJI`, `KANA`, `MIXED`. |
 | `weak_skill_focuses` | `json` | not null | Daftar weak area/skill focus yang dipilih user atau hasil konfirmasi. |
 | `known_skill_claims` | `json` | not null | Klaim skill yang sudah dikuasai hasil structured form + AI draft yang sudah dikonfirmasi. |
 | `onboarding_completed` | `boolean` | not null default `false` | Gate utama untuk akses route app setelah onboarding. |

@@ -83,7 +83,10 @@ components:
           example: Success!
         errorDetails:
           type: array
-          description: Biasanya diisi untuk validation error 422.
+          description: |
+            Biasanya diisi untuk validation error 422. Generic payload/schema
+            validation memakai code domain ...001, sedangkan business-rule
+            validation boleh memakai code spesifik ...002 dan seterusnya.
           items:
             $ref: '#/components/schemas/ErrorDetail'
           default: []
@@ -218,7 +221,7 @@ components:
             data:
               flashcardItems: []
     ValidationError:
-      description: Validation error response.
+      description: Validation error generic untuk payload/schema/type mismatch.
       content:
         application/json:
           schema:
@@ -229,8 +232,24 @@ components:
               code: 142200001
               message: Validation error.
               errorDetails:
-                - field: email
-                  message: Email is required.
+                - field: dailyGoalMinutes
+                  message: dailyGoalMinutes must be an integer.
+    BusinessRuleValidationError:
+      description: |
+        Validation error spesifik untuk request yang bentuk payload-nya valid,
+        tetapi gagal pada aturan bisnis/domain.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status:
+              traceId: 550e8400-e29b-41d4-a716-446655440000
+              code: 142200002
+              message: Business rule validation failed.
+              errorDetails:
+                - field: targetLevel
+                  message: targetLevel is not valid in the published syllabus catalog.
     UnauthorizedError:
       description: Authentication required or invalid session.
       content:

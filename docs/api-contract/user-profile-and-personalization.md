@@ -77,10 +77,10 @@ Request body:
 
 ```json
 {
-  "currentLevel": "jlpt_n5",
-  "targetLevel": "jlpt_n4",
+  "currentLevel": "JLPT_N5",
+  "targetLevel": "JLPT_N4",
   "dailyGoalMinutes": 20,
-  "preferredScript": "mixed",
+  "preferredScript": "MIXED",
   "weakSkillFocuses": ["particles", "listening"],
   "note": "I already know most hiragana and some basic grammar."
 }
@@ -98,10 +98,10 @@ Success response:
   },
   "data": {
     "draftProfile": {
-      "currentLevel": "jlpt_n5",
-      "targetLevel": "jlpt_n4",
+      "currentLevel": "JLPT_N5",
+      "targetLevel": "JLPT_N4",
       "dailyGoalMinutes": 20,
-      "preferredScript": "mixed",
+      "preferredScript": "MIXED",
       "weakSkillFocuses": ["particles", "listening"]
     },
     "suggestedKnownSkillClaims": [
@@ -126,6 +126,8 @@ Validation notes:
 - `targetLevel`, `dailyGoalMinutes`, dan `preferredScript` wajib diisi.
 - `weakSkillFocuses` boleh kosong tetapi harus berbentuk array bila dikirim.
 - `note` opsional dan tidak boleh langsung menjadi source of truth tanpa confirmation user.
+- Gunakan `142203001` untuk payload validation generic, mis. field wajib hilang atau tipe data tidak sesuai.
+- Gunakan `142203002` bila payload secara bentuk valid tetapi referensi personalization tidak cocok dengan katalog syllabus, mis. `targetLevel` tidak ditemukan.
 
 ### `POST /api/v1/personalization/assessment/confirm`
 Menyimpan learner profile final setelah user mereview hasil draft.
@@ -139,10 +141,10 @@ Request body:
 
 ```json
 {
-  "currentLevel": "jlpt_n5",
-  "targetLevel": "jlpt_n4",
+  "currentLevel": "JLPT_N5",
+  "targetLevel": "JLPT_N4",
   "dailyGoalMinutes": 20,
-  "preferredScript": "mixed",
+  "preferredScript": "MIXED",
   "weakSkillFocuses": ["particles", "listening"],
   "knownSkillClaims": ["hiragana_basic"]
 }
@@ -167,10 +169,10 @@ Success response:
       "onboardingCompleted": true,
       "accessState": "APP_READY",
       "learnerProfile": {
-        "currentLevel": "jlpt_n5",
-        "targetLevel": "jlpt_n4",
+        "currentLevel": "JLPT_N5",
+        "targetLevel": "JLPT_N4",
         "dailyGoalMinutes": 20,
-        "preferredScript": "mixed",
+        "preferredScript": "MIXED",
         "weakSkillFocuses": ["particles", "listening"],
         "knownSkillClaims": ["hiragana_basic"],
         "onboardingCompletedAt": "2026-04-04T10:00:00Z"
@@ -206,7 +208,8 @@ Success response:
 | --- | --- | --- |
 | `200` | `120003000` | Personalization success |
 | `401` | `140103001` | Session tidak ada atau tidak valid untuk personalization API |
-| `422` | `142203001` | Validation error generic |
+| `422` | `142203001` | Validation error generic untuk payload/schema |
+| `422` | `142203002` | Referensi personalization tidak valid terhadap katalog syllabus |
 | `500` | `150003999` | Unhandled personalization exception |
 
 ## OpenAPI Artifact

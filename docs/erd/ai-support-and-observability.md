@@ -94,13 +94,13 @@ Log utama level request untuk kebutuhan audit, budget guardrail, dan observabili
 | `id` | `char(36)` | PK | Internal log id. |
 | `request_key` | `varchar(100)` | UK, not null | Correlation id internal untuk satu logical AI request. |
 | `user_id` | `char(36)` | FK -> `users.id`, null | Nullable untuk request sistem/offline job; terisi untuk flow user-facing. |
-| `source_module` | `varchar(50)` | not null | Mis. `practice`, `personalization`, `shared_ai`. |
-| `operation_name` | `varchar(100)` | not null | Mis. `generate_practice_session`, `grade_practice_answer`, `summarize_placement`, `generate_study_recommendation`. |
-| `source_entity_type` | `varchar(50)` | null | Tipe entity yang memicu request, mis. `practice_session`, `practice_answer`, `personalization_assessment`. |
+| `source_module` | `varchar(50)` | not null | Mis. `PRACTICE`, `PERSONALIZATION`, `SHARED_AI`. |
+| `operation_name` | `varchar(100)` | not null | Mis. `GENERATE_PRACTICE_SESSION`, `GRADE_PRACTICE_ANSWER`, `SUMMARIZE_PLACEMENT`, `GENERATE_STUDY_RECOMMENDATION`. |
+| `source_entity_type` | `varchar(50)` | null | Tipe entity yang memicu request, mis. `PRACTICE_SESSION`, `PRACTICE_ANSWER`, `PERSONALIZATION_ASSESSMENT`. |
 | `source_entity_id` | `char(36)` | null | Identifier entity pemicu dari module asal. |
-| `provider` | `varchar(50)` | not null | Provider final yang dipakai, mis. `openai`. |
+| `provider` | `varchar(50)` | not null | Provider final yang dipakai, mis. `OPENAI`. |
 | `model` | `varchar(100)` | not null | Model final, mis. `gpt-5-mini`. |
-| `request_status` | `varchar(50)` | not null | Mis. `succeeded`, `failed`, `partial`, `cancelled`. |
+| `request_status` | `varchar(50)` | not null | Mis. `SUCCEEDED`, `FAILED`, `PARTIAL`, `CANCELLED`. |
 | `schema_name` | `varchar(100)` | null | Nama schema output yang diharapkan. |
 | `schema_parse_success` | `boolean` | not null default `false` | Status parse final setelah seluruh retry selesai. |
 | `retry_count` | `int` | not null default `0` | Jumlah retry setelah attempt pertama. |
@@ -136,7 +136,7 @@ Detail setiap percobaan request ke provider, termasuk retry dan fallback model.
 | `provider` | `varchar(50)` | not null | Provider yang dipakai attempt ini. |
 | `model` | `varchar(100)` | not null | Model yang dipakai attempt ini. |
 | `provider_request_id` | `varchar(100)` | null | Request id dari provider bila tersedia. |
-| `attempt_status` | `varchar(50)` | not null | Mis. `succeeded`, `failed`, `timeout`, `parse_failed`. |
+| `attempt_status` | `varchar(50)` | not null | Mis. `SUCCEEDED`, `FAILED`, `TIMEOUT`, `PARSE_FAILED`. |
 | `latency_ms` | `int` | null | Latency satu attempt. |
 | `prompt_tokens` | `int` | null | Token input per attempt. |
 | `completion_tokens` | `int` | null | Token output per attempt. |

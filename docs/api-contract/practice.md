@@ -62,12 +62,12 @@ Success response:
   },
   "data": {
     "id": "uuid",
-    "status": "generated",
-    "difficultyBand": "standard",
+    "status": "GENERATED",
+    "difficultyBand": "STANDARD",
     "questionMix": {
-      "weak": 0.6,
-      "reinforcement": 0.3,
-      "stretch": 0.1
+      "WEAK": 0.6,
+      "REINFORCEMENT": 0.3,
+      "STRETCH": 0.1
     },
     "totalQuestions": 5,
     "answeredQuestionsCount": 0,
@@ -76,9 +76,9 @@ Success response:
       {
         "id": "uuid",
         "skillCode": "n5_particles_wa_ga_o",
-        "questionType": "multiple_choice",
-        "gradingStrategy": "deterministic",
-        "difficultyBand": "standard",
+        "questionType": "MULTIPLE_CHOICE",
+        "gradingStrategy": "DETERMINISTIC",
+        "difficultyBand": "STANDARD",
         "promptText": "Choose the correct particle.",
         "promptPayload": {
           "options": ["wa", "ga", "o", "ni"]
@@ -113,8 +113,8 @@ Request body:
 
 Behavior:
 - Memuat question dan session context.
-- Jika `gradingStrategy = deterministic`, grading dilakukan di module `practice`.
-- Jika `gradingStrategy = ai`, `practice` memanggil AI provider untuk grading dan short feedback.
+- Jika `gradingStrategy = DETERMINISTIC`, grading dilakukan di module `practice`.
+- Jika `gradingStrategy = AI`, `practice` memanggil AI provider untuk grading dan short feedback.
 - Setelah answer tersimpan, `practice` menjalankan handoff ke `progress`.
 
 Success response:
@@ -134,9 +134,9 @@ Success response:
     "isCorrect": true,
     "numericScore": 100,
     "feedbackText": "Correct particle choice.",
-    "gradingSource": "rule_engine",
+    "gradingSource": "RULE_ENGINE",
     "gradingMetadata": {
-      "gradingStrategy": "deterministic",
+      "gradingStrategy": "DETERMINISTIC",
       "matchedAnswerKeys": ["selectedOption"],
       "accepted": true
     },
@@ -150,8 +150,8 @@ Success response:
       "progressEventId": "uuid",
       "skillCode": "n5_particles_wa_ga_o",
       "masteryScore": 58.4,
-      "masteryState": "developing",
-      "recommendedDifficultyBand": "standard"
+      "masteryState": "DEVELOPING",
+      "recommendedDifficultyBand": "STANDARD"
     }
   }
 }

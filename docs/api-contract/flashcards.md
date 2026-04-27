@@ -3,7 +3,7 @@
 ## Scope
 - Dokumen ini menyelesaikan bagian `flashcards` dari task `ARCH-15`.
 - Fokusnya adalah katalog deck, pembuatan custom deck, pembuatan session, dan submit answer flashcard sampai hasil progress terbaru siap dipakai UI.
-- Dokumen ini diturunkan dari sequence diagram flashcard evaluation, progress handoff, dan ERD `flashcard_decks`, `flashcard_items`, `flashcard_sessions`, `flashcard_item_states`.
+- Dokumen ini diturunkan dari sequence diagram flashcard evaluation, progress handoff, dan ERD `flashcard_decks`, `flashcard_deck_items`, `flashcard_items`, `flashcard_sessions`, `flashcard_item_states`.
 
 ## Source References
 - Sequence flashcard evaluation: [flashcard-and-answer-evaluation.md](../sequence-diagram/flashcard-and-answer-evaluation.md)
@@ -15,7 +15,7 @@
 
 ## Design Goals
 - Menjaga `flashcards` tetap menjadi owner untuk deck catalog, session flow, deterministic answer evaluation, dan bucket update.
-- Menyediakan kontrak minimum agar user bisa membuat custom deck miliknya sendiri tanpa mencampur ownership deck bawaan sistem.
+- Menyediakan kontrak minimum agar user bisa membuat custom deck miliknya sendiri dengan mereferensikan `flashcard_item` yang sudah ada, tanpa menduplikasi konten item.
 - Menyediakan kontrak yang cukup untuk UI deck list, memulai session, dan merender feedback hasil jawaban.
 - Menyertakan `progressImpact` ringkas pada response answer agar UI bisa langsung menampilkan efek write-through tanpa memanggil endpoint progress terpisah.
 
@@ -44,14 +44,14 @@ Query params:
 | --- | --- | --- | --- |
 | `offset` | `integer` | no | Zero-based record offset. Default `0`. |
 | `limit` | `integer` | no | Max records per page. Default `10`. |
-| `deckSource` | `string` | no | Filter source deck. Nilai yang didukung: `system`, `custom`, `all`. Default `all`. |
-| `deckTypes` | `string` | no | Filter multi-value dengan separated commas, mis. `foundation,review`. |
+| `deckSource` | `string` | no | Filter source deck. Nilai yang didukung: `SYSTEM`, `CUSTOM`, `ALL`. Default `ALL`. |
+| `deckTypes` | `string` | no | Filter multi-value dengan separated commas, mis. `FOUNDATION,REVIEW`. |
 | `unitSlug` | `string` | no | Filter deck berdasarkan scope unit syllabus. |
 
 Behavior:
-- Jika `deckSource = system`, endpoint hanya mengembalikan deck system yang `is_published = true`.
-- Jika `deckSource = custom`, endpoint hanya mengembalikan custom deck milik current user.
-- Jika `deckSource = all` atau parameter tidak dikirim, endpoint mengembalikan keduanya.
+- Jika `deckSource = SYSTEM`, endpoint hanya mengembalikan deck system yang `is_published = true`.
+- Jika `deckSource = CUSTOM`, endpoint hanya mengembalikan custom deck milik current user.
+- Jika `deckSource = ALL` atau parameter tidak dikirim, endpoint mengembalikan keduanya.
 - List response hanya membawa ringkasan deck, bukan seluruh item.
 
 Success response:
@@ -78,8 +78,8 @@ Success response:
         "slug": "n5-kana-foundation",
         "title": "N5 Kana Foundation",
         "description": "Review core hiragana and katakana.",
-        "deckSource": "system",
-        "deckType": "foundation",
+        "deckSource": "SYSTEM",
+        "deckType": "FOUNDATION",
         "unitSlug": "n5-kana-basics",
         "sortOrder": 1,
         "itemCount": 30,
@@ -91,7 +91,7 @@ Success response:
 ```
 
 ### `POST /api/v1/flashcards/decks`
-Membuat custom flashcard deck milik current user beserta item awalnya.
+Membuat custom flashcard deck milik current user dengan mereferensikan item flashcard yang sudah ada.
 
 Request body:
 
@@ -99,29 +99,25 @@ Request body:
 {
   "title": "My Basic Kanji Deck",
   "description": "Deck pribadi untuk review kanji dasar N5.",
-  "deckType": "foundation",
+  "deckType": "FOUNDATION",
   "unitSlug": "n5-kanji-basics",
   "items": [
-    {
-      "itemType": "kanji_character",
-      "skillCode": "kanji_n5_day",
-      "promptText": "日",
-      "promptPayload": {},
-      "answerText": "nichi",
-      "acceptedAnswers": ["nichi", "hi"],
-      "hintText": "Basic N5 kanji for day or sun.",
-      "explanationText": "Kanji 日 umum dipakai dengan bacaan にち atau ひ tergantung konteks."
-    }
+    "uuid",
+    "uuid"
   ]
 }
 ```
 
 Behavior:
-- Membuat deck baru dengan `deck_source = custom`, `owner_user_id = current user`, dan `is_published = false`.
+- Membuat deck baru dengan `deck_source = CUSTOM`, `owner_user_id = current user`, dan `is_published = false`.
 - Bila `unitSlug` dikirim, sistem memvalidasi referensinya terhadap katalog syllabus.
-- Bila `skillCode` dikirim pada item, sistem memvalidasi bahwa skill tersebut ada di katalog resmi.
-- Semua item awal dibuat secara atomik bersama deck agar deck tidak tersimpan dalam keadaan kosong parsial.
-- Urutan item mengikuti urutan array `items` bila client tidak mengirim metadata urutan lain.
+- Field `items` berisi array `itemId` yang mereferensikan `flashcard_item` existing, bukan definisi konten item baru.
+- Jika `items` tidak dikirim atau array kosong, deck tetap boleh dibuat dalam keadaan tanpa item.
+- Jika `items` dikirim, sistem membuat membership di `flashcard_deck_items` secara atomik bersama deck.
+- Urutan item mengikuti urutan array `items`.
+- Setiap `itemId` harus valid dan dapat diakses untuk dipakai di custom deck.
+- Gunakan `142205001` untuk payload validation generic, mis. `items` bukan array string UUID.
+- Gunakan `142205003` bila payload secara bentuk valid tetapi satu atau lebih `itemId` tidak sah untuk dipakai sebagai member custom deck.
 
 Success response:
 
@@ -138,11 +134,11 @@ Success response:
     "slug": null,
     "title": "My Basic Kanji Deck",
     "description": "Deck pribadi untuk review kanji dasar N5.",
-    "deckSource": "custom",
-    "deckType": "foundation",
+    "deckSource": "CUSTOM",
+    "deckType": "FOUNDATION",
     "unitSlug": "n5-kanji-basics",
     "sortOrder": 0,
-    "itemCount": 1,
+    "itemCount": 2,
     "isPublished": false
   }
 }
@@ -177,14 +173,14 @@ Success response:
   },
   "data": {
     "id": "uuid",
-    "status": "active",
+    "status": "ACTIVE",
     "startedAt": "2026-04-04T10:00:00Z",
     "deck": {
       "id": "uuid",
       "slug": "n5-kana-foundation",
       "title": "N5 Kana Foundation",
-      "deckSource": "system",
-      "deckType": "foundation"
+      "deckSource": "SYSTEM",
+      "deckType": "FOUNDATION"
     },
     "sessionProgress": {
       "totalAnswered": 0,
@@ -193,7 +189,7 @@ Success response:
     },
     "currentItem": {
       "id": "uuid",
-      "itemType": "hiragana_character",
+      "itemType": "HIRAGANA_CHARACTER",
       "promptText": "あ",
       "promptPayload": {},
       "hintText": "First vowel in hiragana."
@@ -224,7 +220,7 @@ Request body:
 Behavior:
 - Memuat `flashcard_session`, `flashcard_item`, dan `flashcard_item_state`.
 - Menilai jawaban secara deterministik terhadap `answer_text` dan `accepted_answers`.
-- Mengubah bucket `new -> learning -> mastered` sesuai hasil grading.
+- Mengubah bucket `NEW -> LEARNING -> MASTERED` sesuai hasil grading.
 - Menyimpan update internal `flashcards` terlebih dahulu.
 - Menjalankan handoff ke `progress` dan mengembalikan ringkasan efek snapshot terbaru.
 
@@ -247,8 +243,8 @@ Success response:
     "feedbackText": "Correct.",
     "explanationText": "This is the hiragana character for 'a'.",
     "bucketUpdate": {
-      "previousBucket": "new",
-      "currentBucket": "learning",
+      "previousBucket": "NEW",
+      "currentBucket": "LEARNING",
       "consecutiveCorrectCount": 1,
       "nextDueAt": "2026-04-04T12:00:00Z"
     },
@@ -260,7 +256,7 @@ Success response:
     },
     "nextItem": {
       "id": "uuid",
-      "itemType": "hiragana_character",
+      "itemType": "HIRAGANA_CHARACTER",
       "promptText": "い",
       "promptPayload": {},
       "hintText": "Second vowel in hiragana."
@@ -269,8 +265,8 @@ Success response:
       "progressEventId": "uuid",
       "skillCode": "hiragana_basic",
       "masteryScore": 42.5,
-      "masteryState": "developing",
-      "recommendedDifficultyBand": "standard"
+      "masteryState": "DEVELOPING",
+      "recommendedDifficultyBand": "STANDARD"
     }
   }
 }
@@ -286,8 +282,9 @@ Success response:
 | `404` | `140405001` | Flashcard deck tidak ditemukan atau tidak bisa diakses |
 | `404` | `140405002` | Flashcard session tidak ditemukan atau bukan milik user |
 | `404` | `140405003` | Flashcard item tidak ditemukan dalam session aktif |
-| `422` | `142205001` | Validation error generic |
+| `422` | `142205001` | Validation error generic untuk payload/schema |
 | `422` | `142205002` | `itemId` tidak cocok dengan current item session |
+| `422` | `142205003` | Satu atau lebih `itemId` tidak valid untuk custom deck |
 | `500` | `150005999` | Unhandled flashcards exception |
 
 ## OpenAPI Artifact

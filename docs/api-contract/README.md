@@ -116,6 +116,8 @@ Rules:
 - `status.message` harus human-readable dan aman ditampilkan di UI bila memang dibutuhkan.
 - Gunakan `401` saat request tidak memiliki session valid atau identity tidak bisa diverifikasi.
 - Gunakan `403` saat session valid tetapi user belum memenuhi rule akses, misalnya belum menyelesaikan onboarding untuk endpoint yang mewajibkan app access penuh.
+- Untuk HTTP `422`, gunakan code generic domain `...001` bila error hanya berupa validasi payload/schema, misalnya field wajib hilang, tipe data salah, atau format dasar request tidak cocok.
+- Gunakan code `422` spesifik domain `...002` dan seterusnya hanya bila payload secara bentuk sudah valid tetapi gagal pada aturan bisnis/domain, misalnya referensi katalog tidak ditemukan atau entity yang direferensikan tidak sah untuk operasi tersebut.
 
 ## Error Code Convention
 - `status.code` adalah application-specific code 9 digit dengan format:
@@ -142,6 +144,7 @@ Rules:
 - Dua error bisa berbagi HTTP status yang sama tetapi tetap dibedakan oleh `specific_error_code`.
 - Jika nanti jumlah interface atau domain makin kompleks, registry `interface_type` dan `domain_id` harus dipelihara secara terpusat agar tidak bentrok.
 - Karena code ini mengandung informasi yang terstruktur, field `status.code` sebaiknya diperlakukan sebagai identifier stabil aplikasi, bukan pengganti HTTP status itu sendiri.
+- Khusus `422`, reserve `specific_error_code = 001` untuk generic payload validation error. Gunakan `002+` hanya untuk error business rule yang memang perlu dibedakan secara semantik oleh client atau observability.
 
 ## Trace ID Convention
 - `status.traceId` direkomendasikan berupa UUID per request untuk korelasi log dan debugging.

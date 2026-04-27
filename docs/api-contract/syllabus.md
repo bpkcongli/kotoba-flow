@@ -144,7 +144,7 @@ Success response:
             "curriculumLevel": "N5",
             "title": "Hiragana Basics",
             "description": "Recognize and read basic hiragana.",
-            "skillType": "kana",
+            "skillType": "KANA",
             "supportsFlashcards": true,
             "supportsPracticeObjective": true,
             "supportsPracticeFreeResponse": false,

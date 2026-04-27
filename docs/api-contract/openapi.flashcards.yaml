@@ -4,8 +4,8 @@ info:
   version: 0.1.0
   description: |
     Dokumen ini menyelesaikan bagian flashcards dari task ARCH-15. Endpoint di
-    sini mencakup deck list, custom deck creation, session creation, dan answer
-    submission berikut ringkasan progress impact.
+    sini mencakup deck list, custom deck creation by existing item reference,
+    session creation, dan answer submission berikut ringkasan progress impact.
 servers:
   - url: http://localhost:3000/api/v1
     description: Local development server
@@ -30,22 +30,22 @@ paths:
         - name: deckSource
           in: query
           required: false
-          description: Filter source deck. Gunakan system, custom, atau all. Default all.
+          description: Filter source deck. Gunakan SYSTEM, CUSTOM, atau ALL. Default ALL.
           schema:
             type: string
             enum:
-              - system
-              - custom
-              - all
-            default: all
-            example: all
+              - SYSTEM
+              - CUSTOM
+              - ALL
+            default: ALL
+            example: ALL
         - name: deckTypes
           in: query
           required: false
-          description: Filter multi-value dengan separated commas, mis. foundation,review.
+          description: Filter multi-value dengan separated commas, mis. FOUNDATION,REVIEW.
           schema:
             type: string
-            example: foundation,review
+            example: FOUNDATION,REVIEW
         - name: unitSlug
           in: query
           required: false
@@ -76,8 +76,8 @@ paths:
                       slug: n5-kana-foundation
                       title: N5 Kana Foundation
                       description: Review core hiragana and katakana.
-                      deckSource: system
-                      deckType: foundation
+                      deckSource: SYSTEM
+                      deckType: FOUNDATION
                       unitSlug: n5-kana-basics
                       sortOrder: 1
                       itemCount: 30
@@ -111,7 +111,8 @@ paths:
         - Flashcards
       summary: Create custom flashcard deck
       description: |
-        Membuat custom flashcard deck milik current user beserta item awalnya.
+        Membuat custom flashcard deck milik current user dengan mereferensikan
+        item flashcard yang sudah ada.
       operationId: createCustomFlashcardDeck
       security:
         - cookieAuth: []
@@ -124,19 +125,11 @@ paths:
             example:
               title: My Basic Kanji Deck
               description: Deck pribadi untuk review kanji dasar N5.
-              deckType: foundation
+              deckType: FOUNDATION
               unitSlug: n5-kanji-basics
               items:
-                - itemType: kanji_character
-                  skillCode: kanji_n5_day
-                  promptText: 日
-                  promptPayload: {}
-                  answerText: nichi
-                  acceptedAnswers:
-                    - nichi
-                    - hi
-                  hintText: Basic N5 kanji for day or sun.
-                  explanationText: Kanji 日 umum dipakai dengan bacaan にち atau ひ tergantung konteks.
+                - 880e8400-e29b-41d4-a716-446655440333
+                - 990e8400-e29b-41d4-a716-446655440444
       responses:
         '200':
           description: Custom flashcard deck berhasil dibuat.
@@ -155,11 +148,11 @@ paths:
                   slug: null
                   title: My Basic Kanji Deck
                   description: Deck pribadi untuk review kanji dasar N5.
-                  deckSource: custom
-                  deckType: foundation
+                  deckSource: CUSTOM
+                  deckType: FOUNDATION
                   unitSlug: n5-kanji-basics
                   sortOrder: 0
-                  itemCount: 1
+                  itemCount: 2
                   isPublished: false
         '401':
           description: Session tidak ada atau tidak valid.
@@ -191,14 +184,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                status:
-                  traceId: 550e8400-e29b-41d4-a716-446655440000
-                  code: 142205001
-                  message: Invalid custom flashcard deck payload.
-                  errorDetails:
-                    - field: items
-                      message: Custom deck must contain at least one item.
+              examples:
+                invalidPayload:
+                  summary: Generic payload validation
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142205001
+                      message: Validation error.
+                      errorDetails:
+                        - field: items
+                          message: items must be an array of UUID strings.
+                invalidItemReference:
+                  summary: Business rule validation for existing item reference
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142205003
+                      message: Invalid custom flashcard deck payload.
+                      errorDetails:
+                        - field: items
+                          message: One or more itemId values are invalid.
   /flashcards/sessions:
     post:
       tags:
@@ -221,6 +227,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FlashcardSessionResponse'
+              example:
+                status:
+                  traceId: 550e8400-e29b-41d4-a716-446655440000
+                  code: 120005000
+                  message: Success!
+                  errorDetails: []
+                data:
+                  id: 770e8400-e29b-41d4-a716-446655440222
+                  status: ACTIVE
+                  startedAt: '2026-04-04T10:00:00Z'
+                  deck:
+                    id: 880e8400-e29b-41d4-a716-446655440333
+                    slug: n5-kana-foundation
+                    title: N5 Kana Foundation
+                    deckSource: SYSTEM
+                    deckType: FOUNDATION
+                  sessionProgress:
+                    totalAnswered: 0
+                    correctCount: 0
+                    incorrectCount: 0
+                  currentItem:
+                    id: 990e8400-e29b-41d4-a716-446655440444
+                    itemType: HIRAGANA_CHARACTER
+                    promptText: あ
+                    promptPayload: {}
+                    hintText: First vowel in hiragana.
         '401':
           description: Session tidak ada atau tidak valid.
           content:
@@ -302,6 +334,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FlashcardAnswerResponse'
+              example:
+                status:
+                  traceId: 550e8400-e29b-41d4-a716-446655440000
+                  code: 120005000
+                  message: Success!
+                  errorDetails: []
+                data:
+                  sessionId: 770e8400-e29b-41d4-a716-446655440222
+                  itemId: 990e8400-e29b-41d4-a716-446655440444
+                  isCorrect: true
+                  canonicalAnswer: a
+                  acceptedAnswers:
+                    - a
+                  feedbackText: Correct.
+                  explanationText: This is the hiragana character for 'a'.
+                  bucketUpdate:
+                    previousBucket: NEW
+                    currentBucket: LEARNING
+                    consecutiveCorrectCount: 1
+                    nextDueAt: '2026-04-04T12:00:00Z'
+                  sessionProgress:
+                    totalAnswered: 1
+                    correctCount: 1
+                    incorrectCount: 0
+                    isCompleted: false
+                  nextItem:
+                    id: aa0e8400-e29b-41d4-a716-446655440555
+                    itemType: HIRAGANA_CHARACTER
+                    promptText: い
+                    promptPayload: {}
+                    hintText: Second vowel in hiragana.
+                  progressImpact:
+                    progressEventId: bb0e8400-e29b-41d4-a716-446655440666
+                    skillCode: hiragana_basic
+                    masteryScore: 42.5
+                    masteryState: DEVELOPING
+                    recommendedDifficultyBand: STANDARD
         '401':
           description: Session tidak ada atau tidak valid.
           content:
@@ -476,8 +545,8 @@ components:
         deckSource:
           type: string
           enum:
-            - system
-            - custom
+            - SYSTEM
+            - CUSTOM
         deckType:
           type: string
         unitSlug:
@@ -514,45 +583,12 @@ components:
           $ref: '#/components/schemas/Metadata'
         data:
           $ref: '#/components/schemas/FlashcardDeckListData'
-    CreateCustomFlashcardDeckItemInput:
-      type: object
-      additionalProperties: false
-      required:
-        - itemType
-        - promptText
-        - answerText
-      properties:
-        itemType:
-          type: string
-        skillCode:
-          type: string
-          nullable: true
-        promptText:
-          type: string
-        promptPayload:
-          type: object
-          additionalProperties: true
-          nullable: true
-        answerText:
-          type: string
-        acceptedAnswers:
-          type: array
-          items:
-            type: string
-          nullable: true
-        hintText:
-          type: string
-          nullable: true
-        explanationText:
-          type: string
-          nullable: true
     CreateCustomFlashcardDeckRequest:
       type: object
       additionalProperties: false
       required:
         - title
         - deckType
-        - items
       properties:
         title:
           type: string
@@ -567,9 +603,10 @@ components:
           nullable: true
         items:
           type: array
-          minItems: 1
           items:
-            $ref: '#/components/schemas/CreateCustomFlashcardDeckItemInput'
+            type: string
+            format: uuid
+          default: []
     FlashcardDeckCreateResponse:
       type: object
       additionalProperties: false
@@ -610,6 +647,9 @@ components:
           type: string
         deckSource:
           type: string
+          enum:
+            - SYSTEM
+            - CUSTOM
         deckType:
           type: string
     FlashcardSessionProgress:
@@ -644,6 +684,7 @@ components:
           format: uuid
         itemType:
           type: string
+          example: HIRAGANA_CHARACTER
         promptText:
           type: string
         promptPayload:
@@ -668,9 +709,9 @@ components:
         status:
           type: string
           enum:
-            - active
-            - completed
-            - abandoned
+            - ACTIVE
+            - COMPLETED
+            - ABANDONED
         startedAt:
           type: string
           format: date-time
@@ -721,15 +762,15 @@ components:
         previousBucket:
           type: string
           enum:
-            - new
-            - learning
-            - mastered
+            - NEW
+            - LEARNING
+            - MASTERED
         currentBucket:
           type: string
           enum:
-            - new
-            - learning
-            - mastered
+            - NEW
+            - LEARNING
+            - MASTERED
         consecutiveCorrectCount:
           type: integer
           minimum: 0
@@ -773,8 +814,10 @@ components:
           type: number
         masteryState:
           type: string
+          example: DEVELOPING
         recommendedDifficultyBand:
           type: string
+          example: STANDARD
     FlashcardAnswerResult:
       type: object
       additionalProperties: false
