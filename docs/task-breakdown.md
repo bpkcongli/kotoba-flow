@@ -26,11 +26,11 @@
 - [x] `ARCH-16` Review konsistensi antara sequence diagram, ERD, dan Swagger agar tidak ada mismatch field atau flow. Lihat [arch-16-consistency-review.md](./arch-16-consistency-review.md).
 
 ### 2. UI System Design
-- [ ] `DS-01` Kumpulkan brief brand identity KotobaHub dari stakeholder sebelum masuk ke visual system final.
-- [ ] `DS-02` Buat design direction board: tone, keywords, visual references, dan learning-product personality.
-- [ ] `DS-03` Definisikan design tokens awal: color roles, typography, spacing, radius, shadow, focus state, motion principles.
-- [ ] `DS-04` Definisikan responsive layout rules untuk mobile dan desktop, termasuk pattern bottom nav dan sidebar/topbar.
-- [ ] `DS-05` Buat information architecture dan page inventory untuk landing, auth, onboarding, dashboard, syllabus, flashcard, practice, progress, settings.
+- [x] `DS-01` Kumpulkan brief brand identity KotobaHub dari stakeholder sebelum masuk ke visual system final. Untuk self-project, brief diperlakukan sebagai arahan resmi dari project owner. Lihat [system-design/brand-identity-brief.md](./system-design/brand-identity-brief.md).
+- [x] `DS-02` Buat design direction board: tone, keywords, visual references, dan learning-product personality. Lihat [system-design/design-direction-board.md](./system-design/design-direction-board.md).
+- [x] `DS-03` Definisikan design tokens awal: color roles, typography, spacing, radius, shadow, focus state, motion principles. Lihat [system-design/design-token-foundation.md](./system-design/design-token-foundation.md).
+- [x] `DS-04` Definisikan responsive layout rules untuk mobile dan desktop, termasuk pattern bottom nav dan sidebar/topbar. Lihat [system-design/responsive-layout-rules.md](./system-design/responsive-layout-rules.md).
+- [x] `DS-05` Buat information architecture dan page inventory untuk landing, auth, onboarding, dashboard, syllabus, flashcard, practice, progress, settings. Lihat [system-design/information-architecture-and-page-inventory.md](./system-design/information-architecture-and-page-inventory.md).
 - [ ] `DS-06` Buat low-fidelity wireframe untuk flow inti: onboarding, syllabus map, flashcard session, practice session, progress dashboard.
 - [ ] `DS-07` Buat component inventory berbasis shadcn yang perlu di-custom untuk KotobaHub.
 - [ ] `DS-08` Finalisasi high-fidelity system design setelah brief brand diterima dan validasi konsistensi antar screen.
