@@ -3,7 +3,7 @@
 ## Scope
 - Dokumen ini menyelesaikan task `ARCH-10`.
 - Fokus utamanya mencakup tabel inti yang diminta oleh task: `flashcard_decks`, `flashcard_items`, `practice_sessions`, `practice_questions`, `practice_answers`, `progress_events`, dan `skill_mastery_snapshots`.
-- Dokumen ini juga menambahkan tiga supporting entity, `flashcard_deck_items`, `flashcard_sessions`, dan `flashcard_item_states`, karena custom deck by reference membutuhkan relasi many-to-many deck-item, sementara sequence diagram `POST /flashcards/sessions/:id/answer` dan rule Leitner bucket tidak bisa dimodelkan dengan aman tanpa state per session dan state per user-per-item.
+- Dokumen ini juga menambahkan empat supporting entity, `flashcard_deck_items`, `flashcard_sessions`, `flashcard_session_answers`, dan `flashcard_item_states`, karena custom deck by reference membutuhkan relasi many-to-many deck-item, sementara flashcard multiple-choice yang membentuk opsi jawaban saat session dibuat, lalu menyimpan snapshot opsi yang benar-benar ditampilkan, tidak bisa dimodelkan dengan aman tanpa state per session, answer log per turn, dan state per user-per-item.
 - Relasi ke `users` dan `skills` diperlakukan sebagai external references dari ERD `ARCH-08` dan `ARCH-09`.
 
 ## Design Goals
@@ -12,6 +12,8 @@
 - Menjaga atribusi `user -> skill -> learning event -> mastery snapshot` tetap stabil untuk dashboard, recommendation, dan future analytics.
 - Mendukung deck bawaan sistem sekaligus custom deck milik user tanpa memaksa keduanya memakai perilaku katalog yang sama.
 - Memungkinkan satu `flashcard_item` direuse oleh banyak deck, termasuk custom deck yang dibentuk user dari item bank yang sudah ada.
+- Mengunci scope MVP flashcard hanya untuk `KANJI` dan `KANA`, sehingga data item dan feedback dapat dimodelkan spesifik untuk karakter tunggal, readings, arti bahasa Inggris, romaji, dan contoh kata.
+- Memastikan pilihan `question_script_mode` dan `answer_script_mode` dipilih sebelum session dimulai lalu dikunci selama session aktif agar evaluasi, opsi jawaban, dan progress attribution tetap konsisten.
 
 ## Entity Relationship Diagram
 
@@ -32,6 +34,8 @@ erDiagram
     FLASHCARD_DECKS ||--o{ FLASHCARD_DECK_ITEMS : contains
     FLASHCARD_ITEMS ||--o{ FLASHCARD_DECK_ITEMS : reused_in
     FLASHCARD_DECKS ||--o{ FLASHCARD_SESSIONS : runs
+    FLASHCARD_SESSIONS ||--o{ FLASHCARD_SESSION_ANSWERS : records
+    FLASHCARD_ITEMS ||--o{ FLASHCARD_SESSION_ANSWERS : asked_in
     FLASHCARD_ITEMS ||--o{ FLASHCARD_ITEM_STATES : tracks
     FLASHCARD_SESSIONS ||--o{ FLASHCARD_ITEM_STATES : updates
 
@@ -58,6 +62,7 @@ erDiagram
         text description
         varchar(50) deck_source
         varchar(50) deck_type
+        varchar(50) content_type
         int sort_order
         boolean is_published
         timestamp created_at
@@ -68,11 +73,14 @@ erDiagram
         char(36) id PK
         char(36) skill_id FK
         varchar(50) item_type
-        text prompt_text
-        json prompt_payload
-        text answer_text
-        json accepted_answers
-        text hint_text
+        varchar(32) character_text
+        text kana_display_text
+        varchar(255) romaji_text
+        text english_meaning
+        json onyomi_readings
+        json kunyomi_readings
+        json example_words
+        json answer_option_payload
         text explanation_text
         boolean is_active
         timestamp created_at
@@ -92,12 +100,35 @@ erDiagram
         char(36) user_id FK
         char(36) deck_id FK
         varchar(50) status
+        varchar(50) question_script_mode
+        varchar(50) answer_script_mode
         char(36) current_item_id FK
+        int total_items
         int total_answered
         int correct_count
         int incorrect_count
         timestamp started_at
         timestamp completed_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    FLASHCARD_SESSION_ANSWERS {
+        char(36) id PK
+        char(36) session_id FK
+        char(36) item_id FK
+        int turn_number
+        varchar(50) prompt_script_mode
+        varchar(50) answer_script_mode
+        text prompt_text_snapshot
+        json options_payload
+        varchar(100) selected_option_id
+        varchar(100) correct_option_id
+        boolean is_correct
+        varchar(50) bucket_before
+        varchar(50) bucket_after
+        int response_time_ms
+        timestamp answered_at
         timestamp created_at
         timestamp updated_at
     }
@@ -206,6 +237,7 @@ erDiagram
 - `flashcard_decks 1 -> N flashcard_deck_items`: satu deck memiliki daftar membership item yang terurut.
 - `flashcard_items 1 -> N flashcard_deck_items`: satu item bisa direuse oleh banyak deck, termasuk deck bawaan sistem dan custom deck user.
 - `flashcard_decks 1 -> N flashcard_sessions`: satu user bisa membuka banyak session untuk deck yang sama di waktu berbeda.
+- `flashcard_sessions 1 -> N flashcard_session_answers`: setiap jawaban item di session dicatat sebagai turn terpisah agar opsi yang ditampilkan, pilihan user, dan hasil bucket update dapat diaudit ulang.
 - `flashcard_items 1 -> N flashcard_item_states`: state Leitner disimpan per `user + item`, bukan di tabel item global.
 - `practice_sessions 1 -> N practice_questions`: satu session practice menghasilkan satu set pertanyaan.
 - `practice_questions 1 -> N practice_answers`: MVP bisa memakai satu answer per question, tetapi relasi dibuat `1 -> N` agar retry/future replay tidak mematahkan schema.
@@ -224,11 +256,12 @@ Katalog deck flashcard yang dibaca user sebelum memulai session.
 | `id` | `char(36)` | PK | Internal deck id. |
 | `owner_user_id` | `char(36)` | FK -> `users.id`, null | `null` untuk deck bawaan sistem; terisi untuk custom deck milik user tertentu. |
 | `slug` | `varchar(100)` | null | Identifier stabil untuk deck bawaan sistem. Pada custom deck bisa `null` atau generated slug internal. |
-| `unit_id` | `char(36)` | FK -> `units.id`, null | Scope utama deck ke unit syllabus; nullable untuk deck campuran. |
+| `unit_id` | `char(36)` | FK -> `units.id`, null | Scope utama deck ke unit syllabus; nullable untuk deck lintas unit. |
 | `title` | `varchar(255)` | not null | Nama deck. |
 | `description` | `text` | null | Ringkasan isi deck. |
 | `deck_source` | `varchar(50)` | not null | Mis. `SYSTEM`, `CUSTOM`. |
 | `deck_type` | `varchar(50)` | not null | Mis. `REVIEW`, `FOUNDATION`, `WEAK_SKILL`. |
+| `content_type` | `varchar(50)` | not null | Scope deck MVP: `KANJI` atau `KANA`. Satu deck tidak boleh mencampur keduanya agar mode script session tetap sederhana dan konsisten. |
 | `sort_order` | `int` | not null | Urutan deck di list UI. |
 | `is_published` | `boolean` | not null default `false` | Gate visibility di katalog umum. Custom deck tetap bisa terlihat oleh owner walau tidak dipublish global. |
 | `created_at` | `timestamp` | not null | Audit create time. |
@@ -241,19 +274,22 @@ Recommended constraints:
 - unique composite `(`unit_id`, `sort_order`)` bila deck memang diurutkan per unit
 
 ### `flashcard_items`
-Item konten flashcard reusable yang menjadi basis evaluasi deterministik.
+Item konten flashcard reusable yang menjadi basis evaluasi deterministik untuk latihan karakter tunggal.
 
 | Column | Type | Constraint | Notes |
 | --- | --- | --- | --- |
 | `id` | `char(36)` | PK | Internal flashcard item id. |
 | `skill_id` | `char(36)` | FK -> `skills.id`, null | Skill utama yang diukur item ini bila item bisa dipetakan ke katalog syllabus resmi. |
-| `item_type` | `varchar(50)` | not null | Mis. `HIRAGANA_CHARACTER`, `KATAKANA_CHARACTER`, `KANJI_CHARACTER`, `VOCABULARY`, `PHRASE`, `SHORT_SENTENCE`. |
-| `prompt_text` | `text` | not null | Prompt utama yang dirender. |
-| `prompt_payload` | `json` | null | Struktur tambahan untuk UI jika prompt butuh metadata. |
-| `answer_text` | `text` | not null | Jawaban canonical. |
-| `accepted_answers` | `json` | null | Variasi jawaban yang tetap dianggap benar. |
-| `hint_text` | `text` | null | Hint ringan opsional. |
-| `explanation_text` | `text` | null | Penjelasan feedback singkat. |
+| `item_type` | `varchar(50)` | not null | Dikunci ke `KANJI_CHARACTER`, `HIRAGANA_CHARACTER`, atau `KATAKANA_CHARACTER`. |
+| `character_text` | `varchar(32)` | not null | Karakter utama yang dipelajari, mis. `日`, `あ`, atau `ア`. |
+| `kana_display_text` | `text` | null | Teks kana canonical untuk mode tanya/jawab `KANA`. Pada item kanji biasanya berupa gabungan display onyomi/kunyomi; pada item kana biasanya sama dengan `character_text`. |
+| `romaji_text` | `varchar(255)` | null | Padanan romaji untuk item kana. Wajib terisi bila `item_type` adalah `HIRAGANA_CHARACTER` atau `KATAKANA_CHARACTER`. |
+| `english_meaning` | `text` | null | Arti bahasa Inggris utama. Wajib terisi untuk item kanji pada scope MVP ini. |
+| `onyomi_readings` | `json` | null | Array kana reading onyomi untuk item kanji. |
+| `kunyomi_readings` | `json` | null | Array kana reading kunyomi untuk item kanji. |
+| `example_words` | `json` | null | Array objek contoh kata untuk item kanji, mis. `[{\"word\":\"日本\",\"kana\":\"にほん\",\"meaning\":\"Japan\"}]`. |
+| `answer_option_payload` | `json` | not null | Seed canonical answer dan distractor pool per script mode. Bukan empat opsi final yang selalu tetap; backend membentuk opsi final saat session dibuat. |
+| `explanation_text` | `text` | null | Narasi singkat opsional di luar field feedback terstruktur. |
 | `is_active` | `boolean` | not null default `true` | Menandai item masih dipakai sistem. |
 | `created_at` | `timestamp` | not null | Audit create time. |
 | `updated_at` | `timestamp` | not null | Audit update time. |
@@ -277,12 +313,17 @@ Recommended constraints:
 - index `flashcard_deck_items_item_idx` pada `item_id`
 
 ### Flashcard Scope Clarification
-- `flashcard_items` tidak dibatasi hanya untuk satu karakter seperti hiragana, katakana, atau kanji tunggal.
-- Satu `flashcard_item` bisa merepresentasikan unit belajar kecil apa pun yang masih cocok untuk pola prompt-jawaban deterministik, misalnya karakter tunggal, kosakata, frasa pendek, atau short sentence/pattern recall.
-- Pembeda cakupan item terutama berada di `item_type`, `prompt_text`, `prompt_payload`, `answer_text`, dan `accepted_answers`, bukan pada tabel terpisah per jenis konten.
+- Scope MVP `flashcard_items` sekarang dikunci ke karakter tunggal `KANJI`, `HIRAGANA`, dan `KATAKANA`.
+- Item kanji membawa data untuk tiga mode tampilan: `KANJI`, `KANA`, dan `ENGLISH`.
+- Item kana membawa data untuk dua mode tampilan: `KANA` dan `ROMAJI`.
+- Evaluasi jawaban tidak lagi memakai free-text. `answer_option_payload` berperan sebagai seed canonical answer dan distractor pool, sedangkan snapshot opsi final yang benar-benar dilihat user disimpan pada `flashcard_session_answers`.
+- Opsi jawaban final dibentuk saat session dibuat berdasarkan `question_script_mode`, `answer_script_mode`, dan item yang dibawa ke session, lalu dipakai konsisten selama session tersebut berjalan.
+- Dengan model ini, tingkat kesulitan tidak terkunci pada empat opsi yang selalu sama, tetapi grading tetap deterministic karena turn answer hanya menilai terhadap snapshot opsi yang sudah dibentuk sebelumnya.
+- Distractor pool adalah kumpulan kandidat jawaban salah yang masih plausibel untuk satu item dan satu script mode. Contoh: item kanji `日` dengan mode jawaban `ENGLISH` bisa memiliki distractor pool seperti `month / moon`, `fire`, `tree`, lalu session builder memilih sebagian kandidat yang paling cocok untuk turn tersebut.
 - `flashcard_decks` mendukung dua sumber:
   - deck bawaan sistem, mis. `Flashcard Kanji JLPT N5 Part 1`
   - custom deck milik user, berisi referensi ke item yang mereka pilih dari item bank yang sudah ada
+- Untuk menjaga UX dan validasi session tetap sederhana, satu deck hanya boleh berisi item dengan `content_type` yang sama.
 - `flashcard_deck_items` adalah source of truth untuk membership item ke deck dan urutan item di dalam deck.
 - Item yang direuse oleh custom deck tetap mempertahankan `skill_id` bawaan item tersebut bila memang ada pemetaan ke katalog syllabus resmi.
 - Jika ada item di item bank yang tidak punya pemetaan ke `skill` resmi, item itu tetap valid untuk latihan pribadi di module `flashcards`, tetapi tidak menjadi kandidat ideal untuk handoff `progress` yang membutuhkan attribution resmi ke `skill -> lesson -> unit -> track`.
@@ -296,7 +337,10 @@ Representasi satu run user ketika mengerjakan deck flashcard.
 | `user_id` | `char(36)` | FK -> `users.id`, not null | Owner session. |
 | `deck_id` | `char(36)` | FK -> `flashcard_decks.id`, not null | Deck yang dikerjakan. |
 | `status` | `varchar(50)` | not null | Mis. `ACTIVE`, `COMPLETED`, `ABANDONED`. |
-| `current_item_id` | `char(36)` | FK -> `flashcard_items.id`, null | Pointer item yang sedang/terakhir dikerjakan. |
+| `question_script_mode` | `varchar(50)` | not null | Untuk deck `KANJI`: `KANJI`, `KANA`, atau `ENGLISH`. Untuk deck `KANA`: `KANA` atau `ROMAJI`. Dipilih sebelum session dimulai lalu dikunci selama session aktif. |
+| `answer_script_mode` | `varchar(50)` | not null | Pasangan mode jawaban yang valid untuk `question_script_mode` pada deck tersebut. |
+| `current_item_id` | `char(36)` | FK -> `flashcard_items.id`, null | Pointer item yang sedang/terakhir dikerjakan. Opsi final untuk item pertama juga dibentuk saat session dibuat. |
+| `total_items` | `int` | not null | Total item yang dibawa ke session ini, mis. `10` item terurut dari deck. |
 | `total_answered` | `int` | not null default `0` | Total jawaban dalam session ini. |
 | `correct_count` | `int` | not null default `0` | Counter jawaban benar. |
 | `incorrect_count` | `int` | not null default `0` | Counter jawaban salah. |
@@ -308,6 +352,34 @@ Representasi satu run user ketika mengerjakan deck flashcard.
 Recommended constraints:
 - index `flashcard_sessions_user_status_idx` pada `user_id, status`
 - index `flashcard_sessions_deck_id_idx` pada `deck_id`
+
+### `flashcard_session_answers`
+Log setiap turn jawaban pada session flashcard.
+
+| Column | Type | Constraint | Notes |
+| --- | --- | --- | --- |
+| `id` | `char(36)` | PK | Internal answer-turn id. |
+| `session_id` | `char(36)` | FK -> `flashcard_sessions.id`, not null | Parent session. |
+| `item_id` | `char(36)` | FK -> `flashcard_items.id`, not null | Item yang ditanyakan pada turn ini. |
+| `turn_number` | `int` | not null | Urutan turn di dalam session. |
+| `prompt_script_mode` | `varchar(50)` | not null | Snapshot mode pertanyaan saat item ditampilkan. |
+| `answer_script_mode` | `varchar(50)` | not null | Snapshot mode jawaban saat opsi dirender. |
+| `prompt_text_snapshot` | `text` | not null | Nilai prompt final yang dilihat user, mis. `日`, `にち・ひ`, atau `sun/day`. |
+| `options_payload` | `json` | not null | Snapshot opsi final yang benar-benar ditampilkan ke user pada turn ini; dibentuk dari distractor pool saat session dibuat atau saat item berikutnya dipersiapkan sebelum render. |
+| `selected_option_id` | `varchar(100)` | not null | Identifier opsi yang dipilih user. |
+| `correct_option_id` | `varchar(100)` | not null | Identifier opsi yang seharusnya benar pada turn ini. |
+| `is_correct` | `boolean` | not null | Outcome deterministic untuk turn ini. |
+| `bucket_before` | `varchar(50)` | not null | Bucket item state sebelum jawaban diproses. |
+| `bucket_after` | `varchar(50)` | not null | Bucket item state setelah jawaban diproses. |
+| `response_time_ms` | `int` | null | Lama waktu user menjawab untuk turn ini. |
+| `answered_at` | `timestamp` | not null | Waktu submit jawaban. |
+| `created_at` | `timestamp` | not null | Audit create time. |
+| `updated_at` | `timestamp` | not null | Audit update time. |
+
+Recommended constraints:
+- unique composite `(`session_id`, `turn_number`)`
+- index `flashcard_session_answers_item_idx` pada `item_id`
+- index `flashcard_session_answers_answered_at_idx` pada `answered_at`
 
 ### `flashcard_item_states`
 State Leitner bucket per user-per-item yang dimiliki module `flashcards`.
@@ -479,7 +551,7 @@ Fakta belajar mentah yang diterima `progress` dari `flashcards` atau `practice`.
 | `skill_id` | `char(36)` | FK -> `skills.id`, not null | Skill yang sudah divalidasi oleh `syllabus`. |
 | `source_type` | `varchar(50)` | not null | Mis. `FLASHCARD`, `PRACTICE`. |
 | `source_session_id` | `char(36)` | not null | Logical reference ke session producer: `practice_sessions.id` bila `source_type = PRACTICE`, atau `flashcard_sessions.id` bila `source_type = FLASHCARD`. |
-| `source_entity_id` | `char(36)` | not null | Logical reference ke entity hasil producer, mis. `practice_answers.id` atau state/result entity di boundary `flashcards`. |
+| `source_entity_id` | `char(36)` | not null | Logical reference ke entity hasil producer, mis. `practice_answers.id` atau `flashcard_session_answers.id`. |
 | `question_type` | `varchar(50)` | not null | Menjaga konteks evaluasi di downstream analytics. |
 | `is_correct` | `boolean` | not null | Outcome boolean untuk agregasi cepat. |
 | `numeric_score` | `decimal(5,2)` | not null | Score normalized untuk mastery engine. |
@@ -580,6 +652,7 @@ Recommended constraints:
 - `practice` memiliki `practice_sessions`, `practice_questions`, dan `practice_answers`.
 - `progress` memiliki `progress_events` dan `skill_mastery_snapshots`.
 - `flashcards` dan `practice` tidak menyimpan mastery langsung; keduanya hanya menulis hasil internal lalu mengirim handoff event ke `progress`.
+- `flashcards` tidak menyimpan opsi final yang selalu sama di `flashcard_items`; item hanya menyimpan seed canonical answer dan distractor pool, sementara opsi final dibentuk di boundary session lalu disnapshot untuk grading.
 - `progress_events` menyimpan attribution `lesson_id`, `unit_id`, dan `track_id` agar timeline, rollup, dan audit tidak perlu selalu resolve ulang tree syllabus saat query read-heavy.
 - Deck bawaan sistem dan custom deck user tetap berada di boundary `flashcards`; pembedanya ada pada `deck_source` dan `owner_user_id`.
 - Item flashcard yang memiliki `skill_id` bisa ikut jalur handoff resmi ke `progress`.

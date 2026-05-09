@@ -5,7 +5,9 @@ info:
   description: |
     Dokumen ini menyelesaikan bagian flashcards dari task ARCH-15. Endpoint di
     sini mencakup deck list, custom deck creation by existing item reference,
-    session creation, dan answer submission berikut ringkasan progress impact.
+    session creation dengan script pair terpilih, dan answer submission
+    multiple-choice berikut ringkasan progress impact. Opsi jawaban final
+    dibentuk saat session dibuat dari canonical answer dan distractor pool.
 servers:
   - url: http://localhost:3000/api/v1
     description: Local development server
@@ -20,7 +22,7 @@ paths:
       tags:
         - Flashcards
       summary: Get accessible flashcard decks
-      description: Mengambil daftar deck flashcard berdasarkan source filter yang diminta.
+      description: Mengambil daftar deck flashcard berdasarkan source dan content type filter.
       operationId: listFlashcardDecks
       security:
         - cookieAuth: []
@@ -52,6 +54,18 @@ paths:
           description: Filter deck berdasarkan scope unit syllabus.
           schema:
             type: string
+        - name: contentType
+          in: query
+          required: false
+          description: Filter keluarga deck. Gunakan KANJI, KANA, atau ALL. Default ALL.
+          schema:
+            type: string
+            enum:
+              - KANJI
+              - KANA
+              - ALL
+            default: ALL
+            example: ALL
       responses:
         '200':
           description: Daftar flashcard deck berhasil diambil.
@@ -73,14 +87,15 @@ paths:
                 data:
                   flashcardDecks:
                     - id: 770e8400-e29b-41d4-a716-446655440222
-                      slug: n5-kana-foundation
-                      title: N5 Kana Foundation
-                      description: Review core hiragana and katakana.
+                      slug: n5-kanji-group-1
+                      title: JLPT N5 Kanji Group 1
+                      description: Kanji dasar N5 dengan mode kanji, kana, dan English.
                       deckSource: SYSTEM
                       deckType: FOUNDATION
-                      unitSlug: n5-kana-basics
+                      contentType: KANJI
+                      unitSlug: n5-kanji-basics
                       sortOrder: 1
-                      itemCount: 30
+                      itemCount: 10
                       isPublished: true
         '401':
           description: Session tidak ada atau tidak valid.
@@ -123,10 +138,11 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateCustomFlashcardDeckRequest'
             example:
-              title: My Basic Kanji Deck
-              description: Deck pribadi untuk review kanji dasar N5.
+              title: My Basic Kana Deck
+              description: Deck pribadi untuk review hiragana dasar.
               deckType: FOUNDATION
-              unitSlug: n5-kanji-basics
+              contentType: KANA
+              unitSlug: n5-kana-basics
               items:
                 - 880e8400-e29b-41d4-a716-446655440333
                 - 990e8400-e29b-41d4-a716-446655440444
@@ -146,11 +162,12 @@ paths:
                 data:
                   id: 770e8400-e29b-41d4-a716-446655440222
                   slug: null
-                  title: My Basic Kanji Deck
-                  description: Deck pribadi untuk review kanji dasar N5.
+                  title: My Basic Kana Deck
+                  description: Deck pribadi untuk review hiragana dasar.
                   deckSource: CUSTOM
                   deckType: FOUNDATION
-                  unitSlug: n5-kanji-basics
+                  contentType: KANA
+                  unitSlug: n5-kana-basics
                   sortOrder: 0
                   itemCount: 2
                   isPublished: false
@@ -200,17 +217,27 @@ paths:
                   value:
                     status:
                       traceId: 550e8400-e29b-41d4-a716-446655440000
-                      code: 142205003
+                      code: 142205002
                       message: Invalid custom flashcard deck payload.
                       errorDetails:
                         - field: items
                           message: One or more itemId values are invalid.
+                mixedContentType:
+                  summary: Item family mismatch with deck content type
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142205003
+                      message: Invalid custom flashcard deck payload.
+                      errorDetails:
+                        - field: items
+                          message: All items must match deck contentType.
   /flashcards/sessions:
     post:
       tags:
         - Flashcards
       summary: Create flashcard session
-      description: Membuat flashcard session baru untuk deck tertentu.
+      description: Membuat flashcard session baru untuk deck tertentu dengan script pair terpilih, sekaligus membentuk opsi jawaban final untuk item-item di session.
       operationId: createFlashcardSession
       security:
         - cookieAuth: []
@@ -220,6 +247,10 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateFlashcardSessionRequest'
+            example:
+              deckId: 880e8400-e29b-41d4-a716-446655440333
+              questionScriptMode: KANJI
+              answerScriptMode: ENGLISH
       responses:
         '200':
           description: Flashcard session berhasil dibuat.
@@ -239,20 +270,39 @@ paths:
                   startedAt: '2026-04-04T10:00:00Z'
                   deck:
                     id: 880e8400-e29b-41d4-a716-446655440333
-                    slug: n5-kana-foundation
-                    title: N5 Kana Foundation
+                    slug: n5-kanji-group-1
+                    title: JLPT N5 Kanji Group 1
                     deckSource: SYSTEM
                     deckType: FOUNDATION
+                    contentType: KANJI
+                  sessionConfig:
+                    questionScriptMode: KANJI
+                    answerScriptMode: ENGLISH
+                    isLocked: true
                   sessionProgress:
+                    totalItems: 10
                     totalAnswered: 0
                     correctCount: 0
                     incorrectCount: 0
                   currentItem:
                     id: 990e8400-e29b-41d4-a716-446655440444
-                    itemType: HIRAGANA_CHARACTER
-                    promptText: あ
-                    promptPayload: {}
-                    hintText: First vowel in hiragana.
+                    itemType: KANJI_CHARACTER
+                    prompt:
+                      scriptMode: KANJI
+                      value: 日
+                    answerOptions:
+                      - id: opt_1
+                        scriptMode: ENGLISH
+                        value: day / sun
+                      - id: opt_2
+                        scriptMode: ENGLISH
+                        value: month / moon
+                      - id: opt_3
+                        scriptMode: ENGLISH
+                        value: fire
+                      - id: opt_4
+                        scriptMode: ENGLISH
+                        value: tree
         '401':
           description: Session tidak ada atau tidak valid.
           content:
@@ -295,22 +345,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                status:
-                  traceId: 550e8400-e29b-41d4-a716-446655440000
-                  code: 142205001
-                  message: Invalid flashcard session payload.
-                  errorDetails:
-                    - field: deckId
-                      message: deckId is required.
+              examples:
+                missingDeckId:
+                  summary: deckId missing
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142205001
+                      message: Invalid flashcard session payload.
+                      errorDetails:
+                        - field: deckId
+                          message: deckId is required.
+                invalidScriptPair:
+                  summary: Script pair invalid for deck content type
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142205004
+                      message: Invalid flashcard session payload.
+                      errorDetails:
+                        - field: answerScriptMode
+                          message: answerScriptMode is not valid for the selected questionScriptMode.
   /flashcards/sessions/{sessionId}/answer:
     post:
       tags:
         - Flashcards
       summary: Submit flashcard answer
       description: |
-        Menilai jawaban flashcard, memperbarui bucket Leitner user, lalu
-        mengembalikan ringkasan progress impact.
+        Menilai jawaban flashcard multiple-choice, memperbarui bucket Leitner
+        user, lalu mengembalikan ringkasan progress impact. Grading dilakukan
+        terhadap snapshot opsi yang sudah dibentuk saat session dibuat.
       operationId: submitFlashcardAnswer
       security:
         - cookieAuth: []
@@ -327,6 +391,10 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/FlashcardAnswerRequest'
+            example:
+              itemId: 990e8400-e29b-41d4-a716-446655440444
+              selectedOptionId: opt_1
+              responseTimeMs: 1800
       responses:
         '200':
           description: Jawaban flashcard berhasil diproses.
@@ -343,31 +411,67 @@ paths:
                 data:
                   sessionId: 770e8400-e29b-41d4-a716-446655440222
                   itemId: 990e8400-e29b-41d4-a716-446655440444
+                  selectedOptionId: opt_1
+                  correctOptionId: opt_1
                   isCorrect: true
-                  canonicalAnswer: a
-                  acceptedAnswers:
-                    - a
-                  feedbackText: Correct.
-                  explanationText: This is the hiragana character for 'a'.
+                  correctAnswer:
+                    scriptMode: ENGLISH
+                    value: day / sun
+                  feedback:
+                    variant: KANJI_EXPLANATION
+                    headline: 'Correct answer: day / sun'
+                    bucketMessage: Bucket promoted to LEARNING.
+                    progressMessage: Progress updated.
+                    kanjiDetails:
+                      character: 日
+                      englishMeaning: day / sun
+                      onyomi:
+                        - ニチ
+                        - ジツ
+                      kunyomi:
+                        - ひ
+                        - び
+                        - か
+                      exampleWords:
+                        - word: 日本
+                          kana: にほん
+                          meaning: Japan
+                        - word: 休日
+                          kana: きゅうじつ
+                          meaning: holiday
                   bucketUpdate:
                     previousBucket: NEW
                     currentBucket: LEARNING
                     consecutiveCorrectCount: 1
                     nextDueAt: '2026-04-04T12:00:00Z'
                   sessionProgress:
+                    totalItems: 10
                     totalAnswered: 1
                     correctCount: 1
                     incorrectCount: 0
                     isCompleted: false
                   nextItem:
                     id: aa0e8400-e29b-41d4-a716-446655440555
-                    itemType: HIRAGANA_CHARACTER
-                    promptText: い
-                    promptPayload: {}
-                    hintText: Second vowel in hiragana.
+                    itemType: KANJI_CHARACTER
+                    prompt:
+                      scriptMode: KANJI
+                      value: 月
+                    answerOptions:
+                      - id: opt_1
+                        scriptMode: ENGLISH
+                        value: month / moon
+                      - id: opt_2
+                        scriptMode: ENGLISH
+                        value: day / sun
+                      - id: opt_3
+                        scriptMode: ENGLISH
+                        value: water
+                      - id: opt_4
+                        scriptMode: ENGLISH
+                        value: gold
                   progressImpact:
                     progressEventId: bb0e8400-e29b-41d4-a716-446655440666
-                    skillCode: hiragana_basic
+                    skillCode: n5_kanji_day
                     masteryScore: 42.5
                     masteryState: DEVELOPING
                     recommendedDifficultyBand: STANDARD
@@ -413,14 +517,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                status:
-                  traceId: 550e8400-e29b-41d4-a716-446655440000
-                  code: 142205002
-                  message: Invalid flashcard answer payload.
-                  errorDetails:
-                    - field: itemId
-                      message: itemId does not match the current session item.
+              examples:
+                invalidCurrentItem:
+                  summary: itemId mismatch with active turn
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142205005
+                      message: Invalid flashcard answer payload.
+                      errorDetails:
+                        - field: itemId
+                          message: itemId does not match the current session item.
+                invalidSelectedOption:
+                  summary: selectedOptionId not part of active options
+                  value:
+                    status:
+                      traceId: 550e8400-e29b-41d4-a716-446655440000
+                      code: 142205006
+                      message: Invalid flashcard answer payload.
+                      errorDetails:
+                        - field: selectedOptionId
+                          message: selectedOptionId is not part of the current item options.
 components:
   securitySchemes:
     cookieAuth:
@@ -526,6 +643,7 @@ components:
         - description
         - deckSource
         - deckType
+        - contentType
         - unitSlug
         - sortOrder
         - itemCount
@@ -549,6 +667,11 @@ components:
             - CUSTOM
         deckType:
           type: string
+        contentType:
+          type: string
+          enum:
+            - KANJI
+            - KANA
         unitSlug:
           type: string
           nullable: true
@@ -589,6 +712,7 @@ components:
       required:
         - title
         - deckType
+        - contentType
       properties:
         title:
           type: string
@@ -598,6 +722,11 @@ components:
           nullable: true
         deckType:
           type: string
+        contentType:
+          type: string
+          enum:
+            - KANJI
+            - KANA
         unitSlug:
           type: string
           nullable: true
@@ -623,10 +752,18 @@ components:
       additionalProperties: false
       required:
         - deckId
+        - questionScriptMode
+        - answerScriptMode
       properties:
         deckId:
           type: string
           format: uuid
+        questionScriptMode:
+          type: string
+          example: KANJI
+        answerScriptMode:
+          type: string
+          example: ENGLISH
     FlashcardDeckSummary:
       type: object
       additionalProperties: false
@@ -636,6 +773,7 @@ components:
         - title
         - deckSource
         - deckType
+        - contentType
       properties:
         id:
           type: string
@@ -652,14 +790,37 @@ components:
             - CUSTOM
         deckType:
           type: string
+        contentType:
+          type: string
+          enum:
+            - KANJI
+            - KANA
+    FlashcardSessionConfig:
+      type: object
+      additionalProperties: false
+      required:
+        - questionScriptMode
+        - answerScriptMode
+        - isLocked
+      properties:
+        questionScriptMode:
+          type: string
+        answerScriptMode:
+          type: string
+        isLocked:
+          type: boolean
     FlashcardSessionProgress:
       type: object
       additionalProperties: false
       required:
+        - totalItems
         - totalAnswered
         - correctCount
         - incorrectCount
       properties:
+        totalItems:
+          type: integer
+          minimum: 1
         totalAnswered:
           type: integer
           minimum: 0
@@ -669,29 +830,56 @@ components:
         incorrectCount:
           type: integer
           minimum: 0
+    FlashcardPrompt:
+      type: object
+      additionalProperties: false
+      required:
+        - scriptMode
+        - value
+      properties:
+        scriptMode:
+          type: string
+        value:
+          type: string
+    FlashcardAnswerOption:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - scriptMode
+        - value
+      properties:
+        id:
+          type: string
+        scriptMode:
+          type: string
+        value:
+          type: string
     FlashcardItemPrompt:
       type: object
       additionalProperties: false
       required:
         - id
         - itemType
-        - promptText
-        - promptPayload
-        - hintText
+        - prompt
+        - answerOptions
       properties:
         id:
           type: string
           format: uuid
         itemType:
           type: string
-          example: HIRAGANA_CHARACTER
-        promptText:
-          type: string
-        promptPayload:
-          type: object
-        hintText:
-          type: string
-          nullable: true
+          enum:
+            - KANJI_CHARACTER
+            - HIRAGANA_CHARACTER
+            - KATAKANA_CHARACTER
+        prompt:
+          $ref: '#/components/schemas/FlashcardPrompt'
+        answerOptions:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/FlashcardAnswerOption'
     FlashcardSession:
       type: object
       additionalProperties: false
@@ -700,6 +888,7 @@ components:
         - status
         - startedAt
         - deck
+        - sessionConfig
         - sessionProgress
         - currentItem
       properties:
@@ -717,6 +906,8 @@ components:
           format: date-time
         deck:
           $ref: '#/components/schemas/FlashcardDeckSummary'
+        sessionConfig:
+          $ref: '#/components/schemas/FlashcardSessionConfig'
         sessionProgress:
           $ref: '#/components/schemas/FlashcardSessionProgress'
         currentItem:
@@ -739,17 +930,93 @@ components:
       additionalProperties: false
       required:
         - itemId
-        - userAnswer
+        - selectedOptionId
       properties:
         itemId:
           type: string
           format: uuid
-        userAnswer:
+        selectedOptionId:
           type: string
         responseTimeMs:
           type: integer
           nullable: true
           minimum: 0
+    FlashcardCorrectAnswer:
+      type: object
+      additionalProperties: false
+      required:
+        - scriptMode
+        - value
+      properties:
+        scriptMode:
+          type: string
+        value:
+          type: string
+    KanjiExampleWord:
+      type: object
+      additionalProperties: false
+      required:
+        - word
+        - kana
+        - meaning
+      properties:
+        word:
+          type: string
+        kana:
+          type: string
+        meaning:
+          type: string
+    KanjiFeedbackDetails:
+      type: object
+      additionalProperties: false
+      required:
+        - character
+        - englishMeaning
+        - onyomi
+        - kunyomi
+        - exampleWords
+      properties:
+        character:
+          type: string
+        englishMeaning:
+          type: string
+        onyomi:
+          type: array
+          items:
+            type: string
+        kunyomi:
+          type: array
+          items:
+            type: string
+        exampleWords:
+          type: array
+          items:
+            $ref: '#/components/schemas/KanjiExampleWord'
+    FlashcardFeedback:
+      type: object
+      additionalProperties: false
+      required:
+        - variant
+        - headline
+        - bucketMessage
+        - progressMessage
+        - kanjiDetails
+      properties:
+        variant:
+          type: string
+          enum:
+            - KANJI_EXPLANATION
+            - KANA_DEFAULT
+        headline:
+          type: string
+        bucketMessage:
+          type: string
+        progressMessage:
+          type: string
+        kanjiDetails:
+          allOf:
+            - $ref: '#/components/schemas/KanjiFeedbackDetails'
+          nullable: true
     BucketUpdate:
       type: object
       additionalProperties: false
@@ -782,11 +1049,15 @@ components:
       type: object
       additionalProperties: false
       required:
+        - totalItems
         - totalAnswered
         - correctCount
         - incorrectCount
         - isCompleted
       properties:
+        totalItems:
+          type: integer
+          minimum: 1
         totalAnswered:
           type: integer
         correctCount:
@@ -824,11 +1095,11 @@ components:
       required:
         - sessionId
         - itemId
+        - selectedOptionId
+        - correctOptionId
         - isCorrect
-        - canonicalAnswer
-        - acceptedAnswers
-        - feedbackText
-        - explanationText
+        - correctAnswer
+        - feedback
         - bucketUpdate
         - sessionProgress
         - nextItem
@@ -840,20 +1111,16 @@ components:
         itemId:
           type: string
           format: uuid
+        selectedOptionId:
+          type: string
+        correctOptionId:
+          type: string
         isCorrect:
           type: boolean
-        canonicalAnswer:
-          type: string
-        acceptedAnswers:
-          type: array
-          items:
-            type: string
-        feedbackText:
-          type: string
-          nullable: true
-        explanationText:
-          type: string
-          nullable: true
+        correctAnswer:
+          $ref: '#/components/schemas/FlashcardCorrectAnswer'
+        feedback:
+          $ref: '#/components/schemas/FlashcardFeedback'
         bucketUpdate:
           $ref: '#/components/schemas/BucketUpdate'
         sessionProgress:

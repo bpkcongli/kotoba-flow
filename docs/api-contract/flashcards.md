@@ -3,7 +3,8 @@
 ## Scope
 - Dokumen ini menyelesaikan bagian `flashcards` dari task `ARCH-15`.
 - Fokusnya adalah katalog deck, pembuatan custom deck, pembuatan session, dan submit answer flashcard sampai hasil progress terbaru siap dipakai UI.
-- Dokumen ini diturunkan dari sequence diagram flashcard evaluation, progress handoff, dan ERD `flashcard_decks`, `flashcard_deck_items`, `flashcard_items`, `flashcard_sessions`, `flashcard_item_states`.
+- Scope flashcard MVP dikunci hanya untuk latihan karakter `KANJI`, `HIRAGANA`, dan `KATAKANA`.
+- Input jawaban tidak lagi berupa free-text. Semua session flashcard memakai multiple-choice dengan opsi jawaban yang dibentuk backend saat session dibuat.
 
 ## Source References
 - Sequence flashcard evaluation: [flashcard-and-answer-evaluation.md](../sequence-diagram/flashcard-and-answer-evaluation.md)
@@ -16,8 +17,40 @@
 ## Design Goals
 - Menjaga `flashcards` tetap menjadi owner untuk deck catalog, session flow, deterministic answer evaluation, dan bucket update.
 - Menyediakan kontrak minimum agar user bisa membuat custom deck miliknya sendiri dengan mereferensikan `flashcard_item` yang sudah ada, tanpa menduplikasi konten item.
-- Menyediakan kontrak yang cukup untuk UI deck list, memulai session, dan merender feedback hasil jawaban.
+- Menyediakan kontrak yang cukup untuk UI deck list, start-session configuration, rendering current card, dan feedback hasil jawaban.
 - Menyertakan `progressImpact` ringkas pada response answer agar UI bisa langsung menampilkan efek write-through tanpa memanggil endpoint progress terpisah.
+- Mengunci keputusan UX bahwa `questionScriptMode` dan `answerScriptMode` dipilih sebelum session dimulai lalu tidak diubah saat session masih aktif. Jika user ingin pasangan mode lain, UI memulai session baru.
+- Menjaga variasi difficulty multiple-choice dengan membentuk opsi final dari canonical answer dan distractor pool saat session dibuat, bukan mengirim empat opsi tetap yang sama untuk setiap item.
+
+## Distractor Pool Mechanism
+- Setiap `flashcard_item` menyimpan canonical answer data dan distractor pool per `answerScriptMode`, bukan daftar empat opsi final yang selalu tetap.
+- Saat `POST /api/v1/flashcards/sessions` dipanggil, backend memilih jawaban benar dan sejumlah distractor yang masih plausibel untuk item-item di session tersebut.
+- Distractor dipilih dari pool yang relevan dengan item dan script mode aktif, lalu disusun menjadi `answerOptions` final untuk turn yang akan ditampilkan.
+- Snapshot opsi final itulah yang menjadi sumber grading deterministic ketika `POST /api/v1/flashcards/sessions/{sessionId}/answer` dipanggil.
+- Dengan model ini, variasi pilihan jawaban tetap hidup antar session, tetapi hasil grading tetap stabil karena backend tidak membentuk ulang opsi saat submit answer.
+
+## Script Mode Rules
+
+Aturan di section ini bersifat deterministik berdasarkan `contentType` deck dan tidak perlu dikirim ulang di payload deck. UI boleh menurunkan opsi pre-session mode picker dari `contentType`, sedangkan backend tetap menjadi validator final saat `POST /api/v1/flashcards/sessions`.
+
+### Deck `KANJI`
+- `questionScriptMode` yang valid: `KANJI`, `KANA`, `ENGLISH`
+- `answerScriptMode` yang valid:
+  - bila pertanyaan `KANJI`, jawaban boleh `KANA` atau `ENGLISH`
+  - bila pertanyaan `KANA`, jawaban boleh `KANJI` atau `ENGLISH`
+  - bila pertanyaan `ENGLISH`, jawaban boleh `KANJI` atau `KANA`
+
+### Deck `KANA`
+- `questionScriptMode` yang valid: `KANA`, `ROMAJI`
+- `answerScriptMode` yang valid:
+  - bila pertanyaan `KANA`, jawaban `ROMAJI`
+  - bila pertanyaan `ROMAJI`, jawaban `KANA`
+
+### Why Session Locking Is Preferred
+- Mengubah mode di tengah session berisiko mengubah tingkat kesulitan dan konteks recall pada item yang sama.
+- Locking per session membuat progress, streak, dan Leitner bucket lebih adil untuk diinterpretasikan.
+- UI jadi lebih sederhana: learner mengatur mode sekali di start sheet, lalu fokus menjawab.
+- Jika learner ingin eksplorasi mode lain, pola UX yang lebih aman adalah `end/restart session with a different script pair`.
 
 ## Endpoint Summary
 
@@ -25,8 +58,8 @@
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/flashcards/decks` | Mengambil daftar deck flashcard yang dapat diakses user | Authenticated + onboarding completed |
 | `POST` | `/api/v1/flashcards/decks` | Membuat custom flashcard deck milik current user | Authenticated + onboarding completed |
-| `POST` | `/api/v1/flashcards/sessions` | Membuat flashcard session baru untuk deck tertentu | Authenticated + onboarding completed |
-| `POST` | `/api/v1/flashcards/sessions/{sessionId}/answer` | Menilai jawaban flashcard, mengubah bucket, dan menjalankan progress handoff | Authenticated + onboarding completed |
+| `POST` | `/api/v1/flashcards/sessions` | Membuat flashcard session baru untuk deck tertentu dengan script pair terpilih | Authenticated + onboarding completed |
+| `POST` | `/api/v1/flashcards/sessions/{sessionId}/answer` | Menilai jawaban pilihan ganda, mengubah bucket, dan menjalankan progress handoff | Authenticated + onboarding completed |
 
 ## Authorization Rules
 - Semua endpoint di dokumen ini membutuhkan session valid dan `APP_READY`.
@@ -47,12 +80,14 @@ Query params:
 | `deckSource` | `string` | no | Filter source deck. Nilai yang didukung: `SYSTEM`, `CUSTOM`, `ALL`. Default `ALL`. |
 | `deckTypes` | `string` | no | Filter multi-value dengan separated commas, mis. `FOUNDATION,REVIEW`. |
 | `unitSlug` | `string` | no | Filter deck berdasarkan scope unit syllabus. |
+| `contentType` | `string` | no | Filter keluarga deck: `KANJI`, `KANA`, atau `ALL`. Default `ALL`. |
 
 Behavior:
 - Jika `deckSource = SYSTEM`, endpoint hanya mengembalikan deck system yang `is_published = true`.
 - Jika `deckSource = CUSTOM`, endpoint hanya mengembalikan custom deck milik current user.
 - Jika `deckSource = ALL` atau parameter tidak dikirim, endpoint mengembalikan keduanya.
 - List response hanya membawa ringkasan deck, bukan seluruh item.
+- Setiap deck membawa `contentType`; pasangan `questionScriptMode` dan `answerScriptMode` diturunkan dari aturan pada section `Script Mode Rules`.
 
 Success response:
 
@@ -75,14 +110,15 @@ Success response:
     "flashcardDecks": [
       {
         "id": "uuid",
-        "slug": "n5-kana-foundation",
-        "title": "N5 Kana Foundation",
-        "description": "Review core hiragana and katakana.",
+        "slug": "n5-kanji-group-1",
+        "title": "JLPT N5 Kanji Group 1",
+        "description": "Kanji dasar N5 dengan mode kanji, kana, dan English.",
         "deckSource": "SYSTEM",
         "deckType": "FOUNDATION",
-        "unitSlug": "n5-kana-basics",
+        "contentType": "KANJI",
+        "unitSlug": "n5-kanji-basics",
         "sortOrder": 1,
-        "itemCount": 30,
+        "itemCount": 10,
         "isPublished": true
       }
     ]
@@ -97,10 +133,11 @@ Request body:
 
 ```json
 {
-  "title": "My Basic Kanji Deck",
-  "description": "Deck pribadi untuk review kanji dasar N5.",
+  "title": "My Basic Kana Deck",
+  "description": "Deck pribadi untuk review hiragana dasar.",
   "deckType": "FOUNDATION",
-  "unitSlug": "n5-kanji-basics",
+  "contentType": "KANA",
+  "unitSlug": "n5-kana-basics",
   "items": [
     "uuid",
     "uuid"
@@ -110,14 +147,16 @@ Request body:
 
 Behavior:
 - Membuat deck baru dengan `deck_source = CUSTOM`, `owner_user_id = current user`, dan `is_published = false`.
+- `contentType` wajib dikirim agar custom deck tetap homogen sejak awal.
 - Bila `unitSlug` dikirim, sistem memvalidasi referensinya terhadap katalog syllabus.
 - Field `items` berisi array `itemId` yang mereferensikan `flashcard_item` existing, bukan definisi konten item baru.
-- Jika `items` tidak dikirim atau array kosong, deck tetap boleh dibuat dalam keadaan tanpa item.
+- Jika `items` tidak dikirim atau array kosong, deck tetap boleh dibuat selama `contentType` valid.
+- Jika `items` dikirim, semua item harus memiliki keluarga konten yang cocok dengan `contentType` deck.
 - Jika `items` dikirim, sistem membuat membership di `flashcard_deck_items` secara atomik bersama deck.
 - Urutan item mengikuti urutan array `items`.
-- Setiap `itemId` harus valid dan dapat diakses untuk dipakai di custom deck.
-- Gunakan `142205001` untuk payload validation generic, mis. `items` bukan array string UUID.
-- Gunakan `142205003` bila payload secara bentuk valid tetapi satu atau lebih `itemId` tidak sah untuk dipakai sebagai member custom deck.
+- Gunakan `142205001` untuk payload validation generic.
+- Gunakan `142205002` bila payload secara bentuk valid tetapi satu atau lebih `itemId` tidak sah untuk dipakai sebagai member custom deck.
+- Gunakan `142205003` bila item valid tetapi campuran `KANJI` dan `KANA`, atau tidak cocok dengan `contentType` deck.
 
 Success response:
 
@@ -132,11 +171,12 @@ Success response:
   "data": {
     "id": "uuid",
     "slug": null,
-    "title": "My Basic Kanji Deck",
-    "description": "Deck pribadi untuk review kanji dasar N5.",
+    "title": "My Basic Kana Deck",
+    "description": "Deck pribadi untuk review hiragana dasar.",
     "deckSource": "CUSTOM",
     "deckType": "FOUNDATION",
-    "unitSlug": "n5-kanji-basics",
+    "contentType": "KANA",
+    "unitSlug": "n5-kana-basics",
     "sortOrder": 0,
     "itemCount": 2,
     "isPublished": false
@@ -151,15 +191,20 @@ Request body:
 
 ```json
 {
-  "deckId": "uuid"
+  "deckId": "uuid",
+  "questionScriptMode": "KANJI",
+  "answerScriptMode": "ENGLISH"
 }
 ```
 
 Behavior:
 - Memvalidasi bahwa deck dapat diakses current user.
-- Membuat `flashcard_session` baru.
+- Memvalidasi bahwa kombinasi `questionScriptMode` dan `answerScriptMode` valid untuk `contentType` deck.
+- Membuat `flashcard_session` baru dan menyimpan script pair tersebut di session.
 - Menentukan item awal yang akan dirender berdasarkan urutan deck dan due state user.
-- Mengembalikan session snapshot beserta current item pertama.
+- Membentuk opsi jawaban final untuk item-item session dari canonical answer dan distractor pool yang relevan dengan script pair terpilih.
+- Mengembalikan session snapshot beserta current item pertama dan opsi jawaban multiple-choice yang sudah dibentuk backend.
+- Script mode pada session dianggap locked. Perubahan mode dilakukan dengan membuat session baru.
 
 Success response:
 
@@ -177,22 +222,52 @@ Success response:
     "startedAt": "2026-04-04T10:00:00Z",
     "deck": {
       "id": "uuid",
-      "slug": "n5-kana-foundation",
-      "title": "N5 Kana Foundation",
+      "slug": "n5-kanji-group-1",
+      "title": "JLPT N5 Kanji Group 1",
       "deckSource": "SYSTEM",
-      "deckType": "FOUNDATION"
+      "deckType": "FOUNDATION",
+      "contentType": "KANJI"
+    },
+    "sessionConfig": {
+      "questionScriptMode": "KANJI",
+      "answerScriptMode": "ENGLISH",
+      "isLocked": true
     },
     "sessionProgress": {
+      "totalItems": 10,
       "totalAnswered": 0,
       "correctCount": 0,
       "incorrectCount": 0
     },
     "currentItem": {
       "id": "uuid",
-      "itemType": "HIRAGANA_CHARACTER",
-      "promptText": "あ",
-      "promptPayload": {},
-      "hintText": "First vowel in hiragana."
+      "itemType": "KANJI_CHARACTER",
+      "prompt": {
+        "scriptMode": "KANJI",
+        "value": "日"
+      },
+      "answerOptions": [
+        {
+          "id": "opt_1",
+          "scriptMode": "ENGLISH",
+          "value": "day / sun"
+        },
+        {
+          "id": "opt_2",
+          "scriptMode": "ENGLISH",
+          "value": "month / moon"
+        },
+        {
+          "id": "opt_3",
+          "scriptMode": "ENGLISH",
+          "value": "fire"
+        },
+        {
+          "id": "opt_4",
+          "scriptMode": "ENGLISH",
+          "value": "tree"
+        }
+      ]
     }
   }
 }
@@ -212,18 +287,23 @@ Request body:
 ```json
 {
   "itemId": "uuid",
-  "userAnswer": "a",
+  "selectedOptionId": "opt_1",
   "responseTimeMs": 1800
 }
 ```
 
 Behavior:
-- Memuat `flashcard_session`, `flashcard_item`, dan `flashcard_item_state`.
-- Menilai jawaban secara deterministik terhadap `answer_text` dan `accepted_answers`.
+- Memuat `flashcard_session`, `flashcard_item`, `flashcard_item_state`, dan script pair session.
+- Memastikan `itemId` cocok dengan current item session aktif.
+- Memastikan `selectedOptionId` ada di opsi jawaban current item.
+- Menilai jawaban secara deterministik terhadap snapshot opsi jawaban yang sudah dibentuk saat session dibuat.
 - Mengubah bucket `NEW -> LEARNING -> MASTERED` sesuai hasil grading.
-- Menyimpan update internal `flashcards` terlebih dahulu.
+- Menyimpan update internal `flashcards` terlebih dahulu, termasuk log di `flashcard_session_answers`.
 - Jika item punya mapping `skill_id` resmi, endpoint menjalankan handoff ke `progress` dan mengembalikan ringkasan efek snapshot terbaru.
 - Jika item belum punya mapping `skill_id` resmi, endpoint tetap sukses untuk update internal `flashcards`, tetapi `progressImpact` bernilai `null`.
+- Feedback response dibedakan menurut tipe item:
+  - untuk `KANJI_CHARACTER`, kirim penjelasan lengkap: kanji, English meaning, kunyomi, onyomi, dan contoh kata
+  - untuk `HIRAGANA_CHARACTER` atau `KATAKANA_CHARACTER`, kirim feedback default: correct answer, bucket update, dan progress update tanpa panel penjelasan panjang
 
 Success response:
 
@@ -238,11 +318,37 @@ Success response:
   "data": {
     "sessionId": "uuid",
     "itemId": "uuid",
+    "selectedOptionId": "opt_1",
+    "correctOptionId": "opt_1",
     "isCorrect": true,
-    "canonicalAnswer": "a",
-    "acceptedAnswers": ["a"],
-    "feedbackText": "Correct.",
-    "explanationText": "This is the hiragana character for 'a'.",
+    "correctAnswer": {
+      "scriptMode": "ENGLISH",
+      "value": "day / sun"
+    },
+    "feedback": {
+      "variant": "KANJI_EXPLANATION",
+      "headline": "Correct answer: day / sun",
+      "bucketMessage": "Bucket promoted to LEARNING.",
+      "progressMessage": "Progress updated.",
+      "kanjiDetails": {
+        "character": "日",
+        "englishMeaning": "day / sun",
+        "onyomi": ["ニチ", "ジツ"],
+        "kunyomi": ["ひ", "び", "か"],
+        "exampleWords": [
+          {
+            "word": "日本",
+            "kana": "にほん",
+            "meaning": "Japan"
+          },
+          {
+            "word": "休日",
+            "kana": "きゅうじつ",
+            "meaning": "holiday"
+          }
+        ]
+      }
+    },
     "bucketUpdate": {
       "previousBucket": "NEW",
       "currentBucket": "LEARNING",
@@ -250,6 +356,7 @@ Success response:
       "nextDueAt": "2026-04-04T12:00:00Z"
     },
     "sessionProgress": {
+      "totalItems": 10,
       "totalAnswered": 1,
       "correctCount": 1,
       "incorrectCount": 0,
@@ -257,14 +364,37 @@ Success response:
     },
     "nextItem": {
       "id": "uuid",
-      "itemType": "HIRAGANA_CHARACTER",
-      "promptText": "い",
-      "promptPayload": {},
-      "hintText": "Second vowel in hiragana."
+      "itemType": "KANJI_CHARACTER",
+      "prompt": {
+        "scriptMode": "KANJI",
+        "value": "月"
+      },
+      "answerOptions": [
+        {
+          "id": "opt_1",
+          "scriptMode": "ENGLISH",
+          "value": "month / moon"
+        },
+        {
+          "id": "opt_2",
+          "scriptMode": "ENGLISH",
+          "value": "day / sun"
+        },
+        {
+          "id": "opt_3",
+          "scriptMode": "ENGLISH",
+          "value": "water"
+        },
+        {
+          "id": "opt_4",
+          "scriptMode": "ENGLISH",
+          "value": "gold"
+        }
+      ]
     },
     "progressImpact": {
       "progressEventId": "uuid",
-      "skillCode": "hiragana_basic",
+      "skillCode": "n5_kanji_day",
       "masteryScore": 42.5,
       "masteryState": "DEVELOPING",
       "recommendedDifficultyBand": "STANDARD"
@@ -284,8 +414,11 @@ Success response:
 | `404` | `140405002` | Flashcard session tidak ditemukan atau bukan milik user |
 | `404` | `140405003` | Flashcard item tidak ditemukan dalam session aktif |
 | `422` | `142205001` | Validation error generic untuk payload/schema |
-| `422` | `142205002` | `itemId` tidak cocok dengan current item session |
-| `422` | `142205003` | Satu atau lebih `itemId` tidak valid untuk custom deck |
+| `422` | `142205002` | Satu atau lebih `itemId` tidak valid untuk custom deck |
+| `422` | `142205003` | Custom deck mencampur item `KANJI` dan `KANA` atau tidak cocok dengan `contentType` |
+| `422` | `142205004` | Kombinasi `questionScriptMode` dan `answerScriptMode` tidak valid untuk deck |
+| `422` | `142205005` | `itemId` tidak cocok dengan current item session |
+| `422` | `142205006` | `selectedOptionId` tidak termasuk opsi pada current item |
 | `500` | `150005999` | Unhandled flashcards exception |
 
 ## OpenAPI Artifact
@@ -294,3 +427,4 @@ Success response:
 ## Notes For Follow-up Tasks
 - Kontrak ini baru mencakup create custom deck. Update deck, delete deck, dan item-level CRUD bisa ditambahkan terpisah bila kebutuhan edit deck sudah jelas.
 - `progressImpact` sengaja dibuat ringkas; detail analytics penuh tetap di domain `progress`.
+- Jika nanti dibutuhkan accessibility override untuk ganti script mode di tengah jalan, sebaiknya diperlakukan sebagai `restart session` agar fairness dan jejak progress tetap stabil.
