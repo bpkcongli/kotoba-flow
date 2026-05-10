@@ -57,16 +57,25 @@ paths:
                   questions:
                     - id: 880e8400-e29b-41d4-a716-446655440333
                       skillCode: n5_particles_wa_ga_o
-                      questionType: MULTIPLE_CHOICE
+                      questionType: SLOT_FILL
                       gradingStrategy: DETERMINISTIC
                       difficultyBand: STANDARD
-                      promptText: Choose the correct particle.
+                      promptText: わたし___がくせいです。
                       promptPayload:
+                        schemaVersion: 1
+                        promptLanguage: JA
+                        optionLanguage: JA
+                        slotCount: 1
+                        sentenceTemplate: わたし___がくせいです。
                         options:
-                          - wa
-                          - ga
-                          - o
-                          - ni
+                          - id: a
+                            label: は
+                          - id: b
+                            label: が
+                          - id: c
+                            label: を
+                          - id: d
+                            label: に
                       sortOrder: 1
         '401':
           description: Session tidak ada atau tidak valid.
@@ -152,7 +161,7 @@ paths:
                   gradingMetadata:
                     gradingStrategy: DETERMINISTIC
                     matchedAnswerKeys:
-                      - selectedOption
+                      - selectedOptionId
                     accepted: true
                   sessionProgress:
                     answeredQuestionsCount: 1
@@ -290,6 +299,10 @@ components:
     PracticeQuestion:
       type: object
       additionalProperties: false
+      description: >
+        Practice question untuk MVP hanya boleh bertipe SLOT_FILL,
+        SHORT_FREE_RESPONSE, atau ARRANGE_TOKEN. MULTIPLE_CHOICE tidak dipakai
+        di practice karena pattern itu dicakup flashcards.
       required:
         - id
         - skillCode
@@ -307,6 +320,14 @@ components:
           type: string
         questionType:
           type: string
+          enum:
+            - SLOT_FILL
+            - SHORT_FREE_RESPONSE
+            - ARRANGE_TOKEN
+          description: >
+            SLOT_FILL memiliki tepat empat opsi dengan prompt dan opsi
+            berbahasa Jepang. SHORT_FREE_RESPONSE selalu English prompt ke
+            Japanese answer. ARRANGE_TOKEN menyusun token menjadi jawaban akhir.
         gradingStrategy:
           type: string
           enum:
@@ -319,6 +340,12 @@ components:
         promptPayload:
           type: object
           additionalProperties: true
+          description: >
+            Payload render question. Untuk SLOT_FILL, sertakan empat opsi
+            berbahasa Jepang dan template kalimat Jepang dengan satu slot
+            kosong. Untuk SHORT_FREE_RESPONSE, sertakan metadata input method
+            romaji ke kana/kanji. Untuk ARRANGE_TOKEN, sertakan daftar token
+            yang harus disusun user.
         sortOrder:
           type: integer
     PracticeSession:
@@ -370,6 +397,53 @@ components:
           $ref: '#/components/schemas/Status'
         data:
           $ref: '#/components/schemas/PracticeSession'
+    PracticeUserAnswerSlotFill:
+      type: object
+      additionalProperties: false
+      required:
+        - selectedOptionId
+      properties:
+        selectedOptionId:
+          type: string
+          description: ID opsi yang dipilih user untuk question type SLOT_FILL.
+    PracticeUserAnswerShortFreeResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - rawInputRomaji
+        - normalizedKana
+      properties:
+        rawInputRomaji:
+          type: string
+          description: Jawaban mentah yang diketik user dalam romaji.
+        normalizedKana:
+          type: string
+          description: Hasil transform input method ke kana sebelum submit final.
+        normalizedKanji:
+          type: string
+          nullable: true
+          description: Bentuk kanji final bila user atau IME memilih kandidat kanji.
+    PracticeUserAnswerArrangeToken:
+      type: object
+      additionalProperties: false
+      required:
+        - arrangedTokenIds
+      properties:
+        arrangedTokenIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          description: Urutan token final untuk question type ARRANGE_TOKEN.
+    PracticeUserAnswer:
+      oneOf:
+        - $ref: '#/components/schemas/PracticeUserAnswerSlotFill'
+        - $ref: '#/components/schemas/PracticeUserAnswerShortFreeResponse'
+        - $ref: '#/components/schemas/PracticeUserAnswerArrangeToken'
+      description: >
+        Bentuk jawaban mengikuti questionType. SLOT_FILL memakai
+        selectedOptionId. SHORT_FREE_RESPONSE menyertakan raw romaji dan hasil
+        normalisasi. ARRANGE_TOKEN menyertakan ordered token ids.
     PracticeAnswerRequest:
       type: object
       additionalProperties: false
@@ -381,10 +455,7 @@ components:
           type: string
           format: uuid
         userAnswer:
-          type: object
-          additionalProperties: false
-          example:
-            selectedOption: wa
+          $ref: '#/components/schemas/PracticeUserAnswer'
         responseTimeMs:
           type: integer
           nullable: true

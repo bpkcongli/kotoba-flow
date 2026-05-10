@@ -48,6 +48,13 @@ Behavior:
 - `practice` meminta recommendation spec dari `personalization`.
 - `practice` memuat constraint katalog dari `syllabus`.
 - AI dipakai untuk generate session payload terstruktur.
+- Generator question untuk MVP hanya boleh menghasilkan `SLOT_FILL`, `SHORT_FREE_RESPONSE`, atau `ARRANGE_TOKEN`.
+- `SLOT_FILL` selalu memiliki tepat empat opsi jawaban.
+- Pada `SLOT_FILL`, prompt berupa kalimat bahasa Jepang dengan satu slot kosong, dan seluruh opsi jawaban juga dalam bahasa Jepang.
+- `SHORT_FREE_RESPONSE` dikunci ke prompt bahasa Inggris dan jawaban bahasa Jepang.
+- `SHORT_FREE_RESPONSE` mengandalkan input method yang menerima romaji lalu mentransform jawaban ke kana atau kanji sebelum submit final.
+- `ARRANGE_TOKEN` meminta user menyusun token/kata menjadi jawaban akhir dan boleh dipakai untuk arah `EN_TO_JA` maupun `JA_TO_EN`.
+- `practice` tidak lagi menghasilkan `MULTIPLE_CHOICE` karena pattern itu sudah dicakup oleh `flashcards`.
 - Response mengembalikan session beserta daftar question yang siap dirender UI.
 
 Success response:
@@ -76,12 +83,22 @@ Success response:
       {
         "id": "uuid",
         "skillCode": "n5_particles_wa_ga_o",
-        "questionType": "MULTIPLE_CHOICE",
+        "questionType": "SLOT_FILL",
         "gradingStrategy": "DETERMINISTIC",
         "difficultyBand": "STANDARD",
-        "promptText": "Choose the correct particle.",
+        "promptText": "わたし___がくせいです。",
         "promptPayload": {
-          "options": ["wa", "ga", "o", "ni"]
+          "schemaVersion": 1,
+          "promptLanguage": "JA",
+          "optionLanguage": "JA",
+          "slotCount": 1,
+          "sentenceTemplate": "わたし___がくせいです。",
+          "options": [
+            { "id": "a", "label": "は" },
+            { "id": "b", "label": "が" },
+            { "id": "c", "label": "を" },
+            { "id": "d", "label": "に" }
+          ]
         },
         "sortOrder": 1
       }
@@ -105,7 +122,7 @@ Request body:
 {
   "questionId": "uuid",
   "userAnswer": {
-    "selectedOption": "wa"
+    "selectedOptionId": "a"
   },
   "responseTimeMs": 4200
 }
@@ -113,6 +130,10 @@ Request body:
 
 Behavior:
 - Memuat question dan session context.
+- Bentuk `userAnswer` mengikuti `questionType`:
+  - `SLOT_FILL`: kirim `selectedOptionId`.
+  - `ARRANGE_TOKEN`: kirim `arrangedTokenIds` sesuai urutan final.
+  - `SHORT_FREE_RESPONSE`: kirim `rawInputRomaji`, `normalizedKana`, dan opsional `normalizedKanji` bila IME di client berhasil menghasilkan kandidat final.
 - Jika `gradingStrategy = DETERMINISTIC`, grading dilakukan di module `practice`.
 - Jika `gradingStrategy = AI`, `practice` memanggil AI provider untuk grading dan short feedback.
 - Setelah answer tersimpan, `practice` menjalankan handoff ke `progress`.
@@ -137,7 +158,7 @@ Success response:
     "gradingSource": "RULE_ENGINE",
     "gradingMetadata": {
       "gradingStrategy": "DETERMINISTIC",
-      "matchedAnswerKeys": ["selectedOption"],
+      "matchedAnswerKeys": ["selectedOptionId"],
       "accepted": true
     },
     "sessionProgress": {
@@ -154,6 +175,49 @@ Success response:
       "recommendedDifficultyBand": "STANDARD"
     }
   }
+}
+```
+
+## Question Type Contract
+
+### `SLOT_FILL`
+- Prompt menampilkan kalimat dengan satu slot kosong.
+- User memilih satu jawaban dari tepat empat opsi.
+- Kalimat prompt dan seluruh opsi jawaban sama-sama dalam bahasa Jepang.
+- `gradingStrategy` default: `DETERMINISTIC`.
+- Bentuk minimum `userAnswer`:
+
+```json
+{
+  "selectedOptionId": "a"
+}
+```
+
+### `SHORT_FREE_RESPONSE`
+- Prompt selalu berupa kalimat penuh dalam bahasa Inggris.
+- User menjawab dalam bahasa Jepang melalui input field.
+- Client input method menerima romaji lalu mentransform jawaban ke kana atau kanji sebelum final submit.
+- Payload jawaban sebaiknya tetap menyertakan bentuk mentah romaji dan hasil normalisasi agar grading AI bisa diaudit.
+- `gradingStrategy` default: `AI`.
+- Bentuk minimum `userAnswer`:
+
+```json
+{
+  "rawInputRomaji": "watashi wa gakusei desu",
+  "normalizedKana": "わたしはがくせいです",
+  "normalizedKanji": "私は学生です"
+}
+```
+
+### `ARRANGE_TOKEN`
+- Prompt meminta user menyusun token/kata menjadi jawaban akhir.
+- Arah soal boleh `EN_TO_JA` atau `JA_TO_EN`.
+- `gradingStrategy` default: `DETERMINISTIC`.
+- Bentuk minimum `userAnswer`:
+
+```json
+{
+  "arrangedTokenIds": ["t1", "t2", "t3", "t4"]
 }
 ```
 

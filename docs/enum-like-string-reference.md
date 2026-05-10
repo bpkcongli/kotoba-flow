@@ -87,9 +87,9 @@ Catatan API:
 - `STRETCH`: porsi soal yang sedikit lebih menantang dari baseline session.
 
 ### `practice_questions.question_type`
-- `MULTIPLE_CHOICE`: soal pilihan ganda.
-- `SLOT_FILL`: soal isi bagian kosong atau slot tertentu.
-- `SHORT_FREE_RESPONSE`: soal jawaban bebas singkat yang biasanya perlu grading AI pada MVP.
+- `SLOT_FILL`: soal isi satu bagian kosong berdasarkan empat opsi jawaban; prompt dan opsi sama-sama dalam bahasa Jepang.
+- `SHORT_FREE_RESPONSE`: soal jawaban bebas singkat, dikunci untuk prompt bahasa Inggris dan jawaban bahasa Jepang; input user boleh dimulai dari romaji lalu ditransform ke kana/kanji.
+- `ARRANGE_TOKEN`: soal menyusun token/kata menjadi jawaban akhir; arah soal boleh `EN_TO_JA` atau `JA_TO_EN`.
 
 ### `practice_questions.grading_strategy`
 - `DETERMINISTIC`: penilaian dilakukan dengan rules engine atau matching terstruktur tanpa AI.
