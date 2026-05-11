@@ -36,9 +36,10 @@
 - [x] `DS-08` Finalisasi high-fidelity system design setelah brief brand diterima dan validasi konsistensi antar screen. Lihat [system-design/high-fidelity-system-design.md](./system-design/high-fidelity-system-design.md).
 
 ### 3. Online Syllabus
-- [ ] `SYL-01` Finalisasi struktur syllabus `track -> unit -> lesson -> skill` berbasis JLPT.
-- [ ] `SYL-02` Tetapkan coverage scope seed awal: detail konten N5 sampai N4, dengan skeleton extensible untuk N3 sampai N2.
-- [ ] `SYL-03` Definisikan schema seed content agar mudah diimport ke database atau dibaca langsung dari repo.
+- [x] `SYL-00` Dokumentasikan source-of-truth syllabus, strategi akuisisi dataset, dan mapping seed content ke ERD. Lihat [syllabus/README.md](./syllabus/README.md), [syllabus/source-of-truth-and-ingestion-plan.md](./syllabus/source-of-truth-and-ingestion-plan.md), dan [syllabus/seed-content-schema.md](./syllabus/seed-content-schema.md).
+- [ ] `SYL-01` Finalisasi struktur syllabus `track -> unit -> lesson -> skill` berbasis JLPT. Lihat [syllabus/README.md](./syllabus/README.md) dan [syllabus/source-of-truth-and-ingestion-plan.md](./syllabus/source-of-truth-and-ingestion-plan.md).
+- [ ] `SYL-02` Tetapkan coverage scope seed awal: detail konten N5 sampai N4, dengan skeleton extensible untuk N3 sampai N2. Lihat [syllabus/README.md](./syllabus/README.md) dan [syllabus/source-of-truth-and-ingestion-plan.md](./syllabus/source-of-truth-and-ingestion-plan.md).
+- [ ] `SYL-03` Definisikan schema seed content agar mudah diimport ke database atau dibaca langsung dari repo. Lihat [syllabus/seed-content-schema.md](./syllabus/seed-content-schema.md) dan [syllabus/source-of-truth-and-ingestion-plan.md](./syllabus/source-of-truth-and-ingestion-plan.md).
 - [ ] `SYL-04` Susun daftar unit per level JLPT dan urutan belajar yang masuk akal untuk learner journey KotobaHub.
 - [ ] `SYL-05` Turunkan setiap unit menjadi lesson dan daftar skill yang bisa di-track oleh sistem.
 - [ ] `SYL-06` Tandai skill yang dipakai oleh flashcard, skill yang dipakai oleh random questions, dan skill yang dipakai keduanya.
