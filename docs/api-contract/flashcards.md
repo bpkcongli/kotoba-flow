@@ -3,7 +3,7 @@
 ## Scope
 - Dokumen ini menyelesaikan bagian `flashcards` dari task `ARCH-15`.
 - Fokusnya adalah katalog deck, pembuatan custom deck, pembuatan session, dan submit answer flashcard sampai hasil progress terbaru siap dipakai UI.
-- Scope flashcard MVP dikunci hanya untuk latihan karakter `KANJI`, `HIRAGANA`, dan `KATAKANA`.
+- Scope flashcard MVP dikunci untuk latihan karakter `KANJI`, `HIRAGANA`, `KATAKANA`, dan kosakata `VOCABULARY` yang masih cocok dievaluasi secara deterministic multiple-choice.
 - Input jawaban tidak lagi berupa free-text. Semua session flashcard memakai multiple-choice dengan opsi jawaban yang dibentuk backend saat session dibuat.
 
 ## Source References
@@ -46,6 +46,14 @@ Aturan di section ini bersifat deterministik berdasarkan `contentType` deck dan 
   - bila pertanyaan `KANA`, jawaban `ROMAJI`
   - bila pertanyaan `ROMAJI`, jawaban `KANA`
 
+### Deck `VOCABULARY`
+- `questionScriptMode` yang valid: `JAPANESE`, `ENGLISH`
+- `answerScriptMode` yang valid:
+  - bila pertanyaan `JAPANESE`, jawaban `ENGLISH`
+  - bila pertanyaan `ENGLISH`, jawaban `JAPANESE` atau `KANA`
+- `KANA` pada vocabulary diperlakukan sebagai reading support atau opsi jawaban saat recall dari English, bukan sebagai `questionScriptMode` utama.
+- `ROMAJI` tidak dipakai sebagai `questionScriptMode` vocabulary pada baseline kontrak ini.
+
 ### Why Session Locking Is Preferred
 - Mengubah mode di tengah session berisiko mengubah tingkat kesulitan dan konteks recall pada item yang sama.
 - Locking per session membuat progress, streak, dan Leitner bucket lebih adil untuk diinterpretasikan.
@@ -80,7 +88,7 @@ Query params:
 | `deckSource` | `string` | no | Filter source deck. Nilai yang didukung: `SYSTEM`, `CUSTOM`, `ALL`. Default `ALL`. |
 | `deckTypes` | `string` | no | Filter multi-value dengan separated commas, mis. `FOUNDATION,REVIEW`. |
 | `unitSlug` | `string` | no | Filter deck berdasarkan scope unit syllabus. |
-| `contentType` | `string` | no | Filter keluarga deck: `KANJI`, `KANA`, atau `ALL`. Default `ALL`. |
+| `contentType` | `string` | no | Filter keluarga deck: `KANJI`, `KANA`, `VOCABULARY`, atau `ALL`. Default `ALL`. |
 
 Behavior:
 - Jika `deckSource = SYSTEM`, endpoint hanya mengembalikan deck system yang `is_published = true`.
@@ -133,11 +141,11 @@ Request body:
 
 ```json
 {
-  "title": "My Basic Kana Deck",
-  "description": "Deck pribadi untuk review hiragana dasar.",
+  "title": "My N5 Vocabulary Deck",
+  "description": "Deck pribadi untuk review kosakata dasar N5.",
   "deckType": "FOUNDATION",
-  "contentType": "KANA",
-  "unitSlug": "n5-kana-basics",
+  "contentType": "VOCABULARY",
+  "unitSlug": "n5-greetings-and-basics",
   "items": [
     "uuid",
     "uuid"
@@ -156,7 +164,7 @@ Behavior:
 - Urutan item mengikuti urutan array `items`.
 - Gunakan `142205001` untuk payload validation generic.
 - Gunakan `142205002` bila payload secara bentuk valid tetapi satu atau lebih `itemId` tidak sah untuk dipakai sebagai member custom deck.
-- Gunakan `142205003` bila item valid tetapi campuran `KANJI` dan `KANA`, atau tidak cocok dengan `contentType` deck.
+- Gunakan `142205003` bila item valid tetapi mencampur keluarga konten yang berbeda, atau tidak cocok dengan `contentType` deck.
 
 Success response:
 
@@ -171,12 +179,12 @@ Success response:
   "data": {
     "id": "uuid",
     "slug": null,
-    "title": "My Basic Kana Deck",
-    "description": "Deck pribadi untuk review hiragana dasar.",
+    "title": "My N5 Vocabulary Deck",
+    "description": "Deck pribadi untuk review kosakata dasar N5.",
     "deckSource": "CUSTOM",
     "deckType": "FOUNDATION",
-    "contentType": "KANA",
-    "unitSlug": "n5-kana-basics",
+    "contentType": "VOCABULARY",
+    "unitSlug": "n5-greetings-and-basics",
     "sortOrder": 0,
     "itemCount": 2,
     "isPublished": false
@@ -205,6 +213,7 @@ Behavior:
 - Membentuk opsi jawaban final untuk item-item session dari canonical answer dan distractor pool yang relevan dengan script pair terpilih.
 - Mengembalikan session snapshot beserta current item pertama dan opsi jawaban multiple-choice yang sudah dibentuk backend.
 - Script mode pada session dianggap locked. Perubahan mode dilakukan dengan membuat session baru.
+- Untuk deck `VOCABULARY`, `prompt.value` biasanya berisi surface form Jepang atau arti bahasa Inggris sesuai `questionScriptMode`, sementara opsi jawaban mengikuti bentuk pasangan canonical yang sudah disiapkan item.
 
 Success response:
 
@@ -303,6 +312,7 @@ Behavior:
 - Jika item belum punya mapping `skill_id` resmi, endpoint tetap sukses untuk update internal `flashcards`, tetapi `progressImpact` bernilai `null`.
 - Feedback response dibedakan menurut tipe item:
   - untuk `KANJI_CHARACTER`, kirim penjelasan lengkap: kanji, English meaning, kunyomi, onyomi, dan contoh kata
+  - untuk `VOCABULARY`, kirim penjelasan ringkas: term Jepang, reading kana bila ada, dan English meaning utama
   - untuk `HIRAGANA_CHARACTER` atau `KATAKANA_CHARACTER`, kirim feedback default: correct answer, bucket update, dan progress update tanpa panel penjelasan panjang
 
 Success response:
@@ -415,7 +425,7 @@ Success response:
 | `404` | `140405003` | Flashcard item tidak ditemukan dalam session aktif |
 | `422` | `142205001` | Validation error generic untuk payload/schema |
 | `422` | `142205002` | Satu atau lebih `itemId` tidak valid untuk custom deck |
-| `422` | `142205003` | Custom deck mencampur item `KANJI` dan `KANA` atau tidak cocok dengan `contentType` |
+| `422` | `142205003` | Custom deck mencampur keluarga item berbeda atau tidak cocok dengan `contentType` |
 | `422` | `142205004` | Kombinasi `questionScriptMode` dan `answerScriptMode` tidak valid untuk deck |
 | `422` | `142205005` | `itemId` tidak cocok dengan current item session |
 | `422` | `142205006` | `selectedOptionId` tidak termasuk opsi pada current item |

@@ -8,6 +8,7 @@ info:
     session creation dengan script pair terpilih, dan answer submission
     multiple-choice berikut ringkasan progress impact. Opsi jawaban final
     dibentuk saat session dibuat dari canonical answer dan distractor pool.
+    Scope MVP mencakup deck KANJI, KANA, dan VOCABULARY.
 servers:
   - url: http://localhost:3000/api/v1
     description: Local development server
@@ -57,12 +58,13 @@ paths:
         - name: contentType
           in: query
           required: false
-          description: Filter keluarga deck. Gunakan KANJI, KANA, atau ALL. Default ALL.
+          description: Filter keluarga deck. Gunakan KANJI, KANA, VOCABULARY, atau ALL. Default ALL.
           schema:
             type: string
             enum:
               - KANJI
               - KANA
+              - VOCABULARY
               - ALL
             default: ALL
             example: ALL
@@ -138,11 +140,11 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateCustomFlashcardDeckRequest'
             example:
-              title: My Basic Kana Deck
-              description: Deck pribadi untuk review hiragana dasar.
+              title: My N5 Vocabulary Deck
+              description: Deck pribadi untuk review kosakata dasar N5.
               deckType: FOUNDATION
-              contentType: KANA
-              unitSlug: n5-kana-basics
+              contentType: VOCABULARY
+              unitSlug: n5-greetings-and-basics
               items:
                 - 880e8400-e29b-41d4-a716-446655440333
                 - 990e8400-e29b-41d4-a716-446655440444
@@ -162,12 +164,12 @@ paths:
                 data:
                   id: 770e8400-e29b-41d4-a716-446655440222
                   slug: null
-                  title: My Basic Kana Deck
-                  description: Deck pribadi untuk review hiragana dasar.
+                  title: My N5 Vocabulary Deck
+                  description: Deck pribadi untuk review kosakata dasar N5.
                   deckSource: CUSTOM
                   deckType: FOUNDATION
-                  contentType: KANA
-                  unitSlug: n5-kana-basics
+                  contentType: VOCABULARY
+                  unitSlug: n5-greetings-and-basics
                   sortOrder: 0
                   itemCount: 2
                   isPublished: false
@@ -672,6 +674,7 @@ components:
           enum:
             - KANJI
             - KANA
+            - VOCABULARY
         unitSlug:
           type: string
           nullable: true
@@ -727,6 +730,7 @@ components:
           enum:
             - KANJI
             - KANA
+            - VOCABULARY
         unitSlug:
           type: string
           nullable: true
@@ -795,6 +799,7 @@ components:
           enum:
             - KANJI
             - KANA
+            - VOCABULARY
     FlashcardSessionConfig:
       type: object
       additionalProperties: false
@@ -873,6 +878,7 @@ components:
             - KANJI_CHARACTER
             - HIRAGANA_CHARACTER
             - KATAKANA_CHARACTER
+            - VOCABULARY
         prompt:
           $ref: '#/components/schemas/FlashcardPrompt'
         answerOptions:
@@ -992,6 +998,20 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/KanjiExampleWord'
+    VocabularyFeedbackDetails:
+      type: object
+      additionalProperties: false
+      required:
+        - term
+        - englishMeaning
+      properties:
+        term:
+          type: string
+        kana:
+          type: string
+          nullable: true
+        englishMeaning:
+          type: string
     FlashcardFeedback:
       type: object
       additionalProperties: false
@@ -1000,13 +1020,13 @@ components:
         - headline
         - bucketMessage
         - progressMessage
-        - kanjiDetails
       properties:
         variant:
           type: string
           enum:
             - KANJI_EXPLANATION
             - KANA_DEFAULT
+            - VOCABULARY_EXPLANATION
         headline:
           type: string
         bucketMessage:
@@ -1016,6 +1036,10 @@ components:
         kanjiDetails:
           allOf:
             - $ref: '#/components/schemas/KanjiFeedbackDetails'
+          nullable: true
+        vocabularyDetails:
+          allOf:
+            - $ref: '#/components/schemas/VocabularyFeedbackDetails'
           nullable: true
     BucketUpdate:
       type: object

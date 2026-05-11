@@ -39,6 +39,8 @@ sequenceDiagram
 
     alt Item type is KANJI_CHARACTER
         App-->>Learner: Show correct answer + kanji + english + kunyomi + onyomi + example words
+    else Item type is VOCABULARY
+        App-->>Learner: Show correct answer + japanese term + kana reading + english meaning
     else Item type is HIRAGANA_CHARACTER or KATAKANA_CHARACTER
         App-->>Learner: Show default feedback: correct answer -> bucket promoted/demoted -> progress update
     end

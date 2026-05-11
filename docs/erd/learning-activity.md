@@ -12,7 +12,7 @@
 - Menjaga atribusi `user -> skill -> learning event -> mastery snapshot` tetap stabil untuk dashboard, recommendation, dan future analytics.
 - Mendukung deck bawaan sistem sekaligus custom deck milik user tanpa memaksa keduanya memakai perilaku katalog yang sama.
 - Memungkinkan satu `flashcard_item` direuse oleh banyak deck, termasuk custom deck yang dibentuk user dari item bank yang sudah ada.
-- Mengunci scope MVP flashcard hanya untuk `KANJI` dan `KANA`, sehingga data item dan feedback dapat dimodelkan spesifik untuk karakter tunggal, readings, arti bahasa Inggris, romaji, dan contoh kata.
+- Mengunci scope MVP flashcard ke `KANJI`, `KANA`, dan `VOCABULARY`, sehingga model data tetap cukup spesifik untuk karakter tunggal maupun kosakata pendek tanpa keluar dari evaluasi deterministic multiple-choice.
 - Memastikan pilihan `question_script_mode` dan `answer_script_mode` dipilih sebelum session dimulai lalu dikunci selama session aktif agar evaluasi, opsi jawaban, dan progress attribution tetap konsisten.
 
 ## Entity Relationship Diagram
@@ -73,7 +73,7 @@ erDiagram
         char(36) id PK
         char(36) skill_id FK
         varchar(50) item_type
-        varchar(32) character_text
+        varchar(255) surface_form_text
         text kana_display_text
         varchar(255) romaji_text
         text english_meaning
@@ -261,7 +261,7 @@ Katalog deck flashcard yang dibaca user sebelum memulai session.
 | `description` | `text` | null | Ringkasan isi deck. |
 | `deck_source` | `varchar(50)` | not null | Mis. `SYSTEM`, `CUSTOM`. |
 | `deck_type` | `varchar(50)` | not null | Mis. `REVIEW`, `FOUNDATION`, `WEAK_SKILL`. |
-| `content_type` | `varchar(50)` | not null | Scope deck MVP: `KANJI` atau `KANA`. Satu deck tidak boleh mencampur keduanya agar mode script session tetap sederhana dan konsisten. |
+| `content_type` | `varchar(50)` | not null | Scope deck MVP: `KANJI`, `KANA`, atau `VOCABULARY`. Satu deck tidak boleh mencampur keluarga konten agar mode script session tetap sederhana dan konsisten. |
 | `sort_order` | `int` | not null | Urutan deck di list UI. |
 | `is_published` | `boolean` | not null default `false` | Gate visibility di katalog umum. Custom deck tetap bisa terlihat oleh owner walau tidak dipublish global. |
 | `created_at` | `timestamp` | not null | Audit create time. |
@@ -274,20 +274,20 @@ Recommended constraints:
 - unique composite `(`unit_id`, `sort_order`)` bila deck memang diurutkan per unit
 
 ### `flashcard_items`
-Item konten flashcard reusable yang menjadi basis evaluasi deterministik untuk latihan karakter tunggal.
+Item konten flashcard reusable yang menjadi basis evaluasi deterministik untuk latihan karakter tunggal maupun kosakata pendek.
 
 | Column | Type | Constraint | Notes |
 | --- | --- | --- | --- |
 | `id` | `char(36)` | PK | Internal flashcard item id. |
 | `skill_id` | `char(36)` | FK -> `skills.id`, null | Skill utama yang diukur item ini bila item bisa dipetakan ke katalog syllabus resmi. |
-| `item_type` | `varchar(50)` | not null | Dikunci ke `KANJI_CHARACTER`, `HIRAGANA_CHARACTER`, atau `KATAKANA_CHARACTER`. |
-| `character_text` | `varchar(32)` | not null | Karakter utama yang dipelajari, mis. `日`, `あ`, atau `ア`. |
-| `kana_display_text` | `text` | null | Teks kana canonical untuk mode tanya/jawab `KANA`. Pada item kanji biasanya berupa gabungan display onyomi/kunyomi; pada item kana biasanya sama dengan `character_text`. |
-| `romaji_text` | `varchar(255)` | null | Padanan romaji untuk item kana. Wajib terisi bila `item_type` adalah `HIRAGANA_CHARACTER` atau `KATAKANA_CHARACTER`. |
-| `english_meaning` | `text` | null | Arti bahasa Inggris utama. Wajib terisi untuk item kanji pada scope MVP ini. |
+| `item_type` | `varchar(50)` | not null | Dikunci ke `KANJI_CHARACTER`, `HIRAGANA_CHARACTER`, `KATAKANA_CHARACTER`, atau `VOCABULARY`. |
+| `surface_form_text` | `varchar(255)` | not null | Teks utama item pada mode prompt permukaan, mis. `日`, `あ`, `ア`, `学校`, atau `食べる`. |
+| `kana_display_text` | `text` | null | Teks kana canonical untuk mode tanya/jawab `KANA`. Pada item kanji biasanya berupa gabungan display onyomi/kunyomi, pada item kana biasanya sama dengan `surface_form_text`, dan pada item vocabulary biasanya berisi reading kana utama. |
+| `romaji_text` | `varchar(255)` | null | Padanan romaji untuk item yang mendukung mode `ROMAJI`. Wajib terisi bila `item_type` adalah `HIRAGANA_CHARACTER`, `KATAKANA_CHARACTER`, atau vocabulary yang ingin bisa ditanya/dijawab via romaji. |
+| `english_meaning` | `text` | null | Arti bahasa Inggris utama. Wajib terisi untuk item kanji dan vocabulary pada scope MVP ini. |
 | `onyomi_readings` | `json` | null | Array kana reading onyomi untuk item kanji. |
 | `kunyomi_readings` | `json` | null | Array kana reading kunyomi untuk item kanji. |
-| `example_words` | `json` | null | Array objek contoh kata untuk item kanji, mis. `[{\"word\":\"日本\",\"kana\":\"にほん\",\"meaning\":\"Japan\"}]`. |
+| `example_words` | `json` | null | Array objek contoh kata atau contoh pemakaian ringkas. Pada item kanji bisa berupa contoh kata seperti `[{\"word\":\"日本\",\"kana\":\"にほん\",\"meaning\":\"Japan\"}]`; pada vocabulary boleh dipakai untuk contoh penggunaan bila memang diperlukan. |
 | `answer_option_payload` | `json` | not null | Seed canonical answer dan distractor pool per script mode. Bukan empat opsi final yang selalu tetap; backend membentuk opsi final saat session dibuat. |
 | `explanation_text` | `text` | null | Narasi singkat opsional di luar field feedback terstruktur. |
 | `is_active` | `boolean` | not null default `true` | Menandai item masih dipakai sistem. |
@@ -313,13 +313,14 @@ Recommended constraints:
 - index `flashcard_deck_items_item_idx` pada `item_id`
 
 ### Flashcard Scope Clarification
-- Scope MVP `flashcard_items` sekarang dikunci ke karakter tunggal `KANJI`, `HIRAGANA`, dan `KATAKANA`.
+- Scope MVP `flashcard_items` sekarang mencakup karakter tunggal `KANJI`, `HIRAGANA`, `KATAKANA`, dan item `VOCABULARY`.
 - Item kanji membawa data untuk tiga mode tampilan: `KANJI`, `KANA`, dan `ENGLISH`.
 - Item kana membawa data untuk dua mode tampilan: `KANA` dan `ROMAJI`.
+- Item vocabulary minimal membawa data untuk prompt `JAPANESE` dan `ENGLISH`, dengan `KANA` sebagai reading support atau bentuk jawaban alternatif saat diperlukan.
 - Evaluasi jawaban tidak lagi memakai free-text. `answer_option_payload` berperan sebagai seed canonical answer dan distractor pool, sedangkan snapshot opsi final yang benar-benar dilihat user disimpan pada `flashcard_session_answers`.
 - Opsi jawaban final dibentuk saat session dibuat berdasarkan `question_script_mode`, `answer_script_mode`, dan item yang dibawa ke session, lalu dipakai konsisten selama session tersebut berjalan.
 - Dengan model ini, tingkat kesulitan tidak terkunci pada empat opsi yang selalu sama, tetapi grading tetap deterministic karena turn answer hanya menilai terhadap snapshot opsi yang sudah dibentuk sebelumnya.
-- Distractor pool adalah kumpulan kandidat jawaban salah yang masih plausibel untuk satu item dan satu script mode. Contoh: item kanji `日` dengan mode jawaban `ENGLISH` bisa memiliki distractor pool seperti `month / moon`, `fire`, `tree`, lalu session builder memilih sebagian kandidat yang paling cocok untuk turn tersebut.
+- Distractor pool adalah kumpulan kandidat jawaban salah yang masih plausibel untuk satu item dan satu script mode. Contoh: item kanji `日` dengan mode jawaban `ENGLISH` bisa memiliki distractor pool seperti `month / moon`, `fire`, `tree`, sedangkan item vocabulary `学校` bisa memiliki distractor pool seperti `teacher`, `library`, `station`, lalu session builder memilih sebagian kandidat yang paling cocok untuk turn tersebut.
 - `flashcard_decks` mendukung dua sumber:
   - deck bawaan sistem, mis. `Flashcard Kanji JLPT N5 Part 1`
   - custom deck milik user, berisi referensi ke item yang mereka pilih dari item bank yang sudah ada
@@ -337,7 +338,7 @@ Representasi satu run user ketika mengerjakan deck flashcard.
 | `user_id` | `char(36)` | FK -> `users.id`, not null | Owner session. |
 | `deck_id` | `char(36)` | FK -> `flashcard_decks.id`, not null | Deck yang dikerjakan. |
 | `status` | `varchar(50)` | not null | Mis. `ACTIVE`, `COMPLETED`, `ABANDONED`. |
-| `question_script_mode` | `varchar(50)` | not null | Untuk deck `KANJI`: `KANJI`, `KANA`, atau `ENGLISH`. Untuk deck `KANA`: `KANA` atau `ROMAJI`. Dipilih sebelum session dimulai lalu dikunci selama session aktif. |
+| `question_script_mode` | `varchar(50)` | not null | Untuk deck `KANJI`: `KANJI`, `KANA`, atau `ENGLISH`. Untuk deck `KANA`: `KANA` atau `ROMAJI`. Untuk deck `VOCABULARY`: `JAPANESE` atau `ENGLISH`. Dipilih sebelum session dimulai lalu dikunci selama session aktif. |
 | `answer_script_mode` | `varchar(50)` | not null | Pasangan mode jawaban yang valid untuk `question_script_mode` pada deck tersebut. |
 | `current_item_id` | `char(36)` | FK -> `flashcard_items.id`, null | Pointer item yang sedang/terakhir dikerjakan. Opsi final untuk item pertama juga dibentuk saat session dibuat. |
 | `total_items` | `int` | not null | Total item yang dibawa ke session ini, mis. `10` item terurut dari deck. |
