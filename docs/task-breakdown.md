@@ -37,12 +37,14 @@
 
 ### 3. Online Syllabus
 - [x] `SYL-00` Dokumentasikan source-of-truth syllabus, strategi akuisisi dataset, dan mapping seed content ke ERD. Lihat [syllabus/README.md](./syllabus/README.md), [syllabus/source-of-truth-and-ingestion-plan.md](./syllabus/source-of-truth-and-ingestion-plan.md), dan [syllabus/seed-content-schema.md](./syllabus/seed-content-schema.md).
-- [ ] `SYL-01` Finalisasi struktur syllabus `track -> unit -> lesson -> skill` berbasis JLPT. Lihat [syllabus/README.md](./syllabus/README.md) dan [syllabus/source-of-truth-and-ingestion-plan.md](./syllabus/source-of-truth-and-ingestion-plan.md).
+- [x] `SYL-01` Finalisasi struktur syllabus `track -> unit -> lesson -> skill` berbasis JLPT. Lihat [syllabus/README.md](./syllabus/README.md), [syllabus/source-of-truth-and-ingestion-plan.md](./syllabus/source-of-truth-and-ingestion-plan.md), dan [syllabus/jlpt-syllabus-structure.md](./syllabus/jlpt-syllabus-structure.md).
 - [ ] `SYL-02` Tetapkan coverage scope seed awal: detail konten N5 sampai N4, dengan skeleton extensible untuk N3 sampai N2. Lihat [syllabus/README.md](./syllabus/README.md) dan [syllabus/source-of-truth-and-ingestion-plan.md](./syllabus/source-of-truth-and-ingestion-plan.md).
-- [ ] `SYL-03` Definisikan schema seed content agar mudah diimport ke database atau dibaca langsung dari repo. Lihat [syllabus/seed-content-schema.md](./syllabus/seed-content-schema.md) dan [syllabus/source-of-truth-and-ingestion-plan.md](./syllabus/source-of-truth-and-ingestion-plan.md).
+- [ ] `SYL-03` Definisikan schema seed content agar mudah diimport ke database atau dibaca langsung dari repo. Fokus task ini adalah bentuk schema, bukan crawling penuh dataset. Lihat [syllabus/seed-content-schema.md](./syllabus/seed-content-schema.md) dan [syllabus/source-of-truth-and-ingestion-plan.md](./syllabus/source-of-truth-and-ingestion-plan.md).
+- [ ] `SYL-03A` Mulai akuisisi raw source untuk seed syllabus: download source resmi yang berbentuk dataset, lalu lakukan crawling teratribusi untuk source yang memang tidak punya bulk export resmi, terutama grammar Bunpro dari deck level dan halaman grammar point detail. Simpan snapshot mentah dan catatan provenance di bawah folder source syllabus agar transform seed bisa diaudit.
 - [ ] `SYL-04` Susun daftar unit per level JLPT dan urutan belajar yang masuk akal untuk learner journey KotobaHub.
 - [ ] `SYL-05` Turunkan setiap unit menjadi lesson dan daftar skill yang bisa di-track oleh sistem.
 - [ ] `SYL-06` Tandai skill yang dipakai oleh flashcard, skill yang dipakai oleh random questions, dan skill yang dipakai keduanya.
+- [ ] `SYL-06A` Definisikan mapping dari skill syllabus ke system flashcard deck bawaan, terutama untuk `KANJI` dan `VOCABULARY`, termasuk aturan grouping deck per level/unit, membership item, dan hubungan `skill -> flashcard item -> flashcard deck`.
 - [ ] `SYL-07` Review syllabus supaya align dengan personalization rules dan mastery tracking.
 
 ### 4. Code Implementation
@@ -52,7 +54,7 @@
 - [ ] `IMP-04` Implement backend learner profile dan onboarding personalization persistence.
 - [ ] `IMP-05` Implement backend syllabus read model dan endpoint fetch track/unit/lesson.
 - [ ] `IMP-06` Implement backend progress engine: `progress_events`, `skill_mastery_snapshots`, dan summary aggregation.
-- [ ] `IMP-07` Implement backend flashcard engine: session creation, answer evaluation, Leitner bucket update, dan progress write-through.
+- [ ] `IMP-07` Implement backend flashcard engine: session creation, answer evaluation, Leitner bucket update, progress write-through, serta read/write model untuk system flashcard deck bawaan hasil mapping syllabus `KANA`/`KANJI`/`VOCABULARY`.
 - [ ] `IMP-08` Implement backend AI abstraction layer: provider contract, prompt/template structure, schema validation, observability hooks.
 - [ ] `IMP-09` Implement backend random questions: session generation, answer grading, feedback generation, dan progress integration.
 - [ ] `IMP-10` Implement backend personalization assessment endpoint yang bisa menerima structured form + optional AI note normalization.

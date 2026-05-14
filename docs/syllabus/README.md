@@ -13,6 +13,8 @@
 - `SYL-04` sampai `SYL-07` turunan unit, lesson, skill, support flags, dan review alignment ke personalization/progress.
 
 ## Documents In This Folder
+- [jlpt-syllabus-structure.md](./jlpt-syllabus-structure.md)
+  Mengunci struktur resmi `track -> unit -> lesson -> skill`, taxonomy `curriculumLevel`, taxonomy `skillType`, serta policy support flags untuk task `SYL-01`.
 - [source-of-truth-and-ingestion-plan.md](./source-of-truth-and-ingestion-plan.md)
   Menjelaskan prioritas sumber referensi, cara mengambil dataset, limitasi lisensi/format, dan aturan normalisasi sebelum data masuk ke seed content.
 - [seed-content-schema.md](./seed-content-schema.md)

@@ -29,9 +29,12 @@
 ### `tracks.curriculum_level` dan `skills.curriculum_level`
 - `N5`: materi berada di scope kurikulum JLPT N5.
 - `N4`: materi berada di scope kurikulum JLPT N4.
+- `N3`: materi berada di scope kurikulum JLPT N3.
+- `N2`: materi berada di scope kurikulum JLPT N2.
 
 ### `skills.skill_type`
 - `KANA`: skill terkait penguasaan hiragana, katakana, atau sistem bunyi dasar.
+- `KANJI`: skill terkait penguasaan kanji sebagai target mastery yang bisa di-track.
 - `VOCABULARY`: skill terkait kosakata.
 - `GRAMMAR`: skill terkait pola tata bahasa.
 - `READING`: skill terkait pemahaman bacaan.

@@ -104,7 +104,7 @@ Representasi level kurikulum terbesar yang dipakai untuk course map dan navigasi
 | --- | --- | --- | --- |
 | `id` | `char(36)` | PK | Internal track id. UUID disarankan. |
 | `slug` | `varchar(100)` | UK, not null | Identifier stabil untuk routing/seed, mis. `jlpt-n5-foundation`. |
-| `curriculum_level` | `varchar(50)` | not null | Level kurikulum utama track, mis. `N5`, `N4`, atau label generic lain di masa depan. |
+| `curriculum_level` | `varchar(50)` | not null | Level kurikulum utama track, mis. `N5`, `N4`, `N3`, atau `N2`. |
 | `title` | `varchar(255)` | not null | Nama tampilan track. |
 | `description` | `text` | null | Ringkasan isi track. |
 | `sort_order` | `int` | not null | Urutan track di course map. |
@@ -167,10 +167,10 @@ Kemampuan atomik yang benar-benar di-track mastery-nya oleh sistem.
 | `lesson_id` | `char(36)` | FK -> `lessons.id`, not null | Lesson utama yang memperkenalkan skill ini. |
 | `code` | `varchar(100)` | UK, not null | Identifier stabil untuk cross-module reference, mis. `hiragana_basic`. |
 | `slug` | `varchar(100)` | UK, not null | Alternatif identifier untuk kebutuhan route/seed bila dibutuhkan. |
-| `curriculum_level` | `varchar(50)` | not null | Level kurikulum skill. Tetap bisa diisi `N5`, `N4`, atau taxonomy lain bila model level berubah. |
+| `curriculum_level` | `varchar(50)` | not null | Level kurikulum skill. Baseline ladder saat ini adalah `N5`, `N4`, `N3`, dan `N2`. |
 | `title` | `varchar(255)` | not null | Nama tampilan skill. |
 | `description` | `text` | null | Deskripsi singkat skill. |
-| `skill_type` | `varchar(50)` | not null | Kategori skill, mis. `KANA`, `VOCABULARY`, `GRAMMAR`, `READING`. |
+| `skill_type` | `varchar(50)` | not null | Kategori skill, mis. `KANA`, `KANJI`, `VOCABULARY`, `GRAMMAR`, `READING`. |
 | `supports_flashcards` | `boolean` | not null default `false` | Menandai skill yang cocok untuk deck flashcard. |
 | `supports_practice_objective` | `boolean` | not null default `false` | Menandai skill yang cocok untuk soal deterministik/objective. |
 | `supports_practice_free_response` | `boolean` | not null default `false` | Menandai skill yang cocok untuk short free-response. |
