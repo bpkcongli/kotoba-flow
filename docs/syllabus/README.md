@@ -11,7 +11,9 @@
 - `SYL-02` Penetapan scope seed awal `N5 -> N4`, dengan skeleton `N3 -> N2`. Lihat [seed-coverage-scope.md](./seed-coverage-scope.md).
 - `SYL-03` Definisi schema seed content.
 - `SYL-04` Finalisasi daftar unit per level dan urutan belajar utama. Lihat [jlpt-unit-sequencing.md](./jlpt-unit-sequencing.md).
-- `SYL-05` sampai `SYL-07` turunan lesson, skill, support flags, dan review alignment ke personalization/progress.
+- `SYL-05` Turunan lesson dan skill canonical. Lihat [jlpt-lesson-and-skill-breakdown.md](./jlpt-lesson-and-skill-breakdown.md).
+- `SYL-06` Finalisasi support flags skill terhadap flashcard dan random questions. Lihat [skill-activity-support-matrix.md](./skill-activity-support-matrix.md).
+- `SYL-06A` sampai `SYL-07` mapping deck, seed JSON final, dan review alignment ke personalization/progress.
 
 ## Documents In This Folder
 - [jlpt-syllabus-structure.md](./jlpt-syllabus-structure.md)
@@ -24,6 +26,10 @@
   Menjelaskan bentuk seed content yang disarankan untuk repo dan bagaimana field seed dipetakan ke tabel `tracks`, `units`, `lessons`, `lesson_content_blocks`, `skills`, dan `unit_skill_mappings`.
 - [jlpt-unit-sequencing.md](./jlpt-unit-sequencing.md)
   Mengunci daftar unit published `N5` dan `N4`, urutan learner journey utamanya, serta batas scope `N3/N2` pada task `SYL-04`.
+- [jlpt-lesson-and-skill-breakdown.md](./jlpt-lesson-and-skill-breakdown.md)
+  Menurunkan unit published `N5` dan `N4` menjadi lesson map canonical beserta bentuk skill trackable per lesson untuk task `SYL-05`.
+- [skill-activity-support-matrix.md](./skill-activity-support-matrix.md)
+  Mengunci support flags final seluruh skill published `N5` dan `N4`, termasuk terjemahan istilah produk "random questions" ke `supportsPracticeObjective` dan `supportsPracticeFreeResponse` untuk task `SYL-06`.
 - [raw-source-acquisition.md](./raw-source-acquisition.md)
   Mencatat hasil task `SYL-03A`, termasuk provider mana yang sudah tersnapshot di `content/syllabus/sources/`, mana yang masih partial, dan konvensi provenance/checksum yang dipakai.
 - [schema/](./schema/)

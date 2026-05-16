@@ -78,7 +78,7 @@ Success response:
         "title": "JLPT N5 Foundation",
         "description": "Core beginner syllabus.",
         "sortOrder": 1,
-        "unitCount": 12,
+        "unitCount": 10,
         "foundationUnitSlug": "n5-kana-basics"
       }
     ]
