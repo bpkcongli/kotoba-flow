@@ -2,8 +2,8 @@
 
 ## Scope
 - Dokumen ini menyelesaikan bagian `syllabus` dari task `ARCH-14`.
-- Fokusnya adalah kontrak API read-only untuk course map, onboarding reference data, dan unit detail.
-- Dokumen ini diturunkan dari ERD `tracks`, `units`, `lessons`, `skills`, `unit_skill_mappings` serta route-level requirement yang sudah dikunci di sequence diagram onboarding.
+- Fokusnya adalah kontrak API read-only untuk course map, onboarding reference data, unit detail, dan lesson detail.
+- Dokumen ini diturunkan dari ERD `tracks`, `units`, `lessons`, `lesson_content_blocks`, `skills`, `unit_skill_mappings` serta route-level requirement yang sudah dikunci di sequence diagram onboarding.
 
 ## Source References
 - Sequence onboarding: [onboarding-personalization.md](../sequence-diagram/onboarding-personalization.md)
@@ -16,20 +16,23 @@
 ## Design Goals
 - Menyediakan read model yang cukup untuk dua kebutuhan utama MVP: onboarding reference data dan syllabus exploration.
 - Menjaga `GET /api/v1/syllabus` tetap ringan dan mudah dipaginasi.
-- Menjaga `GET /api/v1/syllabus/units/{unitSlug}` tetap menjadi detail tree utama untuk unit, lesson, dan skill.
+- Menjaga `GET /api/v1/syllabus/units/{unitSlug}` tetap menjadi detail tree utama untuk unit, lesson summary, dan skill mapping.
+- Menyediakan endpoint lesson detail yang khusus memuat paragraf penjelasan materi tanpa membebani response unit detail.
 
 ## Endpoint Summary
 
 | Method | Path | Purpose | Access Requirement |
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/syllabus` | Mengambil daftar track syllabus yang dipublikasikan | Authenticated session |
-| `GET` | `/api/v1/syllabus/units/{unitSlug}` | Mengambil detail satu unit lengkap dengan lesson dan skill | Authenticated + onboarding completed |
+| `GET` | `/api/v1/syllabus/units/{unitSlug}` | Mengambil detail satu unit lengkap dengan lesson summary dan skill | Authenticated + onboarding completed |
+| `GET` | `/api/v1/syllabus/lessons/{lessonSlug}` | Mengambil detail satu lesson lengkap dengan paragraf penjelasan materi | Authenticated + onboarding completed |
 
 ## Authorization Rules
 - `GET /api/v1/syllabus` boleh diakses oleh user dengan state `ONBOARDING_REQUIRED` maupun `APP_READY`, karena onboarding wizard perlu membaca target level dan reference catalog awal.
 - `GET /api/v1/syllabus/units/{unitSlug}` mewajibkan `APP_READY`, karena endpoint ini dipakai untuk area belajar inti setelah onboarding selesai.
+- `GET /api/v1/syllabus/lessons/{lessonSlug}` juga mewajibkan `APP_READY`, karena endpoint ini menjadi source utama untuk membaca materi lesson.
 - Bila session tidak valid, kembalikan `401`.
-- Bila session valid tetapi onboarding belum selesai untuk endpoint unit detail, kembalikan `403`.
+- Bila session valid tetapi onboarding belum selesai untuk endpoint unit detail atau lesson detail, kembalikan `403`.
 
 ## Endpoint Details
 
@@ -84,7 +87,7 @@ Success response:
 ```
 
 ### `GET /api/v1/syllabus/units/{unitSlug}`
-Mengambil detail satu unit, lengkap dengan lesson dan skill yang menjadi scope unit tersebut.
+Mengambil detail satu unit, lengkap dengan lesson summary dan skill yang menjadi scope unit tersebut.
 
 Path params:
 
@@ -104,6 +107,7 @@ Behavior:
 - Menyertakan ringkasan parent track.
 - Jika `includeLessons=true`, lesson diurutkan berdasarkan `sort_order`.
 - Jika `includeSkills=true`, setiap lesson memuat daftar skill yang relevan dan unit juga memuat `unitSkills` untuk query cepat di client.
+- Endpoint ini sengaja hanya memuat lesson summary dan tidak membawa `contentBlocks`; materi baca lengkap diambil lewat endpoint lesson detail.
 
 Success response:
 
@@ -139,11 +143,11 @@ Success response:
         "skills": [
           {
             "id": "uuid",
-            "code": "hiragana_basic",
-            "slug": "hiragana-basic",
+            "code": "hiragana_a_row",
+            "slug": "hiragana-a-row",
             "curriculumLevel": "N5",
-            "title": "Hiragana Basics",
-            "description": "Recognize and read basic hiragana.",
+            "title": "Hiragana A Row",
+            "description": "Recognize and read the hiragana A-row characters.",
             "skillType": "KANA",
             "supportsFlashcards": true,
             "supportsPracticeObjective": true,
@@ -155,10 +159,89 @@ Success response:
     ],
     "unitSkills": [
       {
-        "skillCode": "hiragana_basic",
+        "skillCode": "hiragana_a_row",
         "lessonSlug": "hiragana-row-a",
         "isPrimary": true,
         "sortOrder": 1
+      }
+    ]
+  }
+}
+```
+
+### `GET /api/v1/syllabus/lessons/{lessonSlug}`
+Mengambil detail satu lesson, lengkap dengan parent unit, parent track, paragraf penjelasan materi, dan skill yang diperkenalkan lesson tersebut.
+
+Path params:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `lessonSlug` | `string` | yes | Slug lesson yang stabil dan unik. |
+
+Query params:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `includeContentBlocks` | `boolean` | no | Default `true`. Jika `false`, blok materi tidak dirender. |
+| `includeSkills` | `boolean` | no | Default `true`. Jika `false`, skill list tidak dirender detail. |
+
+Behavior:
+- Mengembalikan lesson published yang valid.
+- Menyertakan ringkasan parent unit dan parent track.
+- Jika `includeContentBlocks=true`, `contentBlocks` diurutkan berdasarkan `sort_order`.
+- Jika `includeSkills=true`, response tetap menyertakan skill introduksi utama lesson.
+
+Success response:
+
+```json
+{
+  "status": {
+    "traceId": "uuid",
+    "code": 120004000,
+    "message": "Success!",
+    "errorDetails": []
+  },
+  "data": {
+    "id": "uuid",
+    "slug": "hiragana-row-a",
+    "title": "Hiragana Row A",
+    "learningObjective": "Recognize and read the first hiragana row.",
+    "sortOrder": 1,
+    "estimatedMinutes": 10,
+    "track": {
+      "id": "uuid",
+      "slug": "jlpt-n5-foundation",
+      "curriculumLevel": "N5",
+      "title": "JLPT N5 Foundation"
+    },
+    "unit": {
+      "id": "uuid",
+      "slug": "n5-kana-basics",
+      "title": "Kana Basics",
+      "sortOrder": 1
+    },
+    "contentBlocks": [
+      {
+        "id": "uuid",
+        "blockType": "PARAGRAPH",
+        "title": "Core Sound Pattern",
+        "body": "The A-row introduces the five core vowel sounds used throughout later lessons.",
+        "sortOrder": 1
+      }
+    ],
+    "skills": [
+      {
+        "id": "uuid",
+        "code": "hiragana_a_row",
+        "slug": "hiragana-a-row",
+        "curriculumLevel": "N5",
+        "title": "Hiragana A Row",
+        "description": "Recognize and read the hiragana A-row characters.",
+        "skillType": "KANA",
+        "supportsFlashcards": true,
+        "supportsPracticeObjective": true,
+        "supportsPracticeFreeResponse": false,
+        "prerequisiteSkillCodes": []
       }
     ]
   }
@@ -173,6 +256,7 @@ Success response:
 | `401` | `140104001` | Session tidak ada atau tidak valid untuk syllabus API |
 | `403` | `140304001` | Onboarding belum selesai untuk endpoint syllabus detail yang memerlukan app access penuh |
 | `404` | `140404001` | Unit slug tidak ditemukan |
+| `404` | `140404002` | Lesson slug tidak ditemukan |
 | `422` | `142204001` | Query filter tidak valid |
 | `500` | `150004999` | Unhandled syllabus exception |
 
@@ -182,3 +266,4 @@ Success response:
 ## Notes For Follow-up Tasks
 - Contract progress/flashcard/practice nanti harus memakai `skill.code` dan mapping `skill -> lesson -> unit -> track` yang konsisten dengan payload syllabus ini.
 - Jika nanti onboarding membutuhkan reference data yang lebih sempit, sebaiknya cukup ditambah query/filter pada endpoint ini, bukan membuat katalog duplikat di domain lain.
+- Surface belajar yang benar-benar menampilkan paragraf materi sebaiknya membaca `GET /api/v1/syllabus/lessons/{lessonSlug}`, bukan memaksa `GET /api/v1/syllabus/units/{unitSlug}` membawa seluruh blok konten sekaligus.

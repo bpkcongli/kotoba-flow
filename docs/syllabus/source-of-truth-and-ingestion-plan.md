@@ -253,7 +253,8 @@ Catatan finalisasi:
   - vocabulary frequency
   - external source attribution
   - raw JLPT overlay signals
-- Untuk fase sekarang, ketiga area itu disimpan di seed content sebagai metadata/support objects, bukan row tabel inti.
+- Untuk fase sekarang, keempat area itu disimpan di seed content sebagai metadata/support objects, bukan row tabel inti.
+- Paragraf penjelasan lesson tidak lagi masuk daftar mismatch ini karena kini sudah dimodelkan langsung melalui tabel `lesson_content_blocks`.
 - Jika nanti produk ingin query sentence/frequency secara langsung dari database, perlu task arsitektur lanjutan untuk menambah tabel baru atau read model turunan.
 
 ## Recommended Next Steps

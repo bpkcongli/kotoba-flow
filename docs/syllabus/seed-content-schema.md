@@ -48,6 +48,7 @@ Notes:
 ## Seed Design Rules
 - Satu file manifest menjadi entrypoint discovery untuk seluruh track seed.
 - Satu file track berisi tree `track -> units -> lessons -> skills`.
+- Paragraf penjelasan materi diletakkan di `lesson.contentBlocks` agar narasi belajar berada di level objective lesson, bukan dicampur ke `skills.description`.
 - Setiap `skill` boleh membawa metadata support di luar ERD inti selama masih relevan untuk import stage.
 - Semua reference ke source eksternal harus berada di bawah field eksplisit agar attribution dan auditing mudah.
 - Example sentences dan frequency metadata ditempatkan di `skill.content`, bukan dipaksa menjadi kolom tabel inti saat ini.
@@ -163,6 +164,7 @@ Rules:
   "sortOrder": 1,
   "estimatedMinutes": 10,
   "isPublished": true,
+  "contentBlocks": [],
   "skills": []
 }
 ```
@@ -178,6 +180,32 @@ Rules:
 | `sortOrder` | `lessons.sort_order` |
 | `estimatedMinutes` | `lessons.estimated_minutes` |
 | `isPublished` | `lessons.is_published` |
+
+## `contentBlocks` Schema
+
+```json
+[
+  {
+    "id": "uuid",
+    "blockType": "PARAGRAPH",
+    "title": "What This Row Sounds Like",
+    "body": "Baris あ memperkenalkan lima bunyi vokal dasar yang akan terus muncul di materi berikutnya.",
+    "sortOrder": 1,
+    "isPublished": true
+  }
+]
+```
+
+### Maps To ERD
+
+| Seed field | ERD target |
+| --- | --- |
+| `id` | `lesson_content_blocks.id` |
+| `blockType` | `lesson_content_blocks.block_type` |
+| `title` | `lesson_content_blocks.title` |
+| `body` | `lesson_content_blocks.body` |
+| `sortOrder` | `lesson_content_blocks.sort_order` |
+| `isPublished` | `lesson_content_blocks.is_published` |
 
 ## Skill Schema
 
@@ -435,6 +463,8 @@ Rules:
 - `track.curriculumLevel` harus cocok dengan ladder resmi product, mis. `N5`, `N4`, `N3`, `N2`.
 - `id` semua entity harus valid UUID string dan stabil antar-regenerasi seed.
 - `unit.sortOrder`, `lesson.sortOrder`, dan `skill.sortOrder` harus unik di parent scope masing-masing.
+- `contentBlocks.sortOrder` harus unik di dalam scope satu lesson.
+- `contentBlocks.blockType` saat ini harus `PARAGRAPH`.
 - `skill.code` harus stabil dan tidak boleh bergantung pada ID source eksternal.
 - `sourceRefs` wajib ada untuk skill yang berasal dari source eksternal.
 - `curriculumSignals.jlpt.candidates` boleh berisi lebih dari satu level bila source overlay konflik.
@@ -447,7 +477,7 @@ Rules:
 - `N3` dan `N2` boleh punya `units: []`, tetapi tetap wajib valid terhadap schema track yang sama dengan `N5` dan `N4`.
 
 ## Why Extra Metadata Lives In Seed
-- ERD inti `syllabus` memang hanya memodelkan `tracks`, `units`, `lessons`, `skills`, dan `unit_skill_mappings`.
+- ERD inti `syllabus` memang terutama memodelkan `tracks`, `units`, `lessons`, `lesson_content_blocks`, `skills`, dan `unit_skill_mappings`.
 - Namun seed content perlu tetap menyimpan:
   - attribution source
   - sentence candidates
@@ -465,6 +495,7 @@ Rules:
 4. Upsert `tracks`.
 5. Upsert `units`.
 6. Upsert `lessons`.
-7. Upsert `skills`.
-8. Derive dan upsert `unit_skill_mappings`.
-9. Simpan metadata non-ERD ke artifact build, JSON cache, atau future table terpisah jika nanti dibutuhkan.
+7. Upsert `lesson_content_blocks`.
+8. Upsert `skills`.
+9. Derive dan upsert `unit_skill_mappings`.
+10. Simpan metadata non-ERD ke artifact build, JSON cache, atau future table terpisah jika nanti dibutuhkan.

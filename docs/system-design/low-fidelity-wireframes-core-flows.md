@@ -124,3 +124,7 @@
 - `DS-08` harus mempertahankan hierarchy, shell behavior, dan responsive intent dari wireframe ini saat masuk ke high-fidelity design.
 - `IMP-11` sampai `IMP-16` harus menjaga kesesuaian screen purpose, focus mode, dan navigation behavior yang sudah divalidasi di task ini.
 - Khusus `Flashcard Session`, implementasi UI perlu mempertahankan keputusan UX bahwa script pair dikonfirmasi sebelum session dimulai dan tidak diubah saat session aktif.
+
+## Tech Debt Note
+- Penambahan tabel `lesson_content_blocks` pada domain syllabus belum tercermin penuh di wireframe low-fidelity ini.
+- Follow-up desainnya dilacak di [tech-debt-register.md](../tech-debt-register.md) item `TD-001`.

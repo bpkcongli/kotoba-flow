@@ -27,6 +27,16 @@
             "sortOrder": 1,
             "estimatedMinutes": 10,
             "isPublished": true,
+            "contentBlocks": [
+              {
+                "id": "ad926543-e6ee-5b36-b0ac-c81aa6e91cc0",
+                "blockType": "PARAGRAPH",
+                "title": "Core Sound Pattern",
+                "body": "Baris あ memperkenalkan lima bunyi vokal dasar yang akan sering muncul kembali pada kata, partikel, dan pola bunyi berikutnya.",
+                "sortOrder": 1,
+                "isPublished": true
+              }
+            ],
             "skills": [
               {
                 "id": "6237fd21-bbef-589a-bdbf-ef094354d598",

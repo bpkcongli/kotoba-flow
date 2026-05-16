@@ -94,7 +94,7 @@ paths:
       tags:
         - Syllabus
       summary: Get syllabus unit detail
-      description: Mengambil detail satu unit lengkap dengan lesson dan skill.
+      description: Mengambil detail satu unit lengkap dengan lesson summary dan skill.
       operationId: getSyllabusUnitDetail
       security:
         - cookieAuth: []
@@ -153,18 +153,18 @@ paths:
                       estimatedMinutes: 10
                       skills:
                         - id: aa0e8400-e29b-41d4-a716-446655440555
-                          code: hiragana_basic
-                          slug: hiragana-basic
+                          code: hiragana_a_row
+                          slug: hiragana-a-row
                           curriculumLevel: N5
-                          title: Hiragana Basics
-                          description: Recognize and read basic hiragana.
+                          title: Hiragana A Row
+                          description: Recognize and read the hiragana A-row characters.
                           skillType: KANA
                           supportsFlashcards: true
                           supportsPracticeObjective: true
                           supportsPracticeFreeResponse: false
                           prerequisiteSkillCodes: []
                   unitSkills:
-                    - skillCode: hiragana_basic
+                    - skillCode: hiragana_a_row
                       lessonSlug: hiragana-row-a
                       isPrimary: true
                       sortOrder: 1
@@ -203,6 +203,122 @@ paths:
                   traceId: 550e8400-e29b-41d4-a716-446655440000
                   code: 140404001
                   message: Syllabus unit not found.
+                  errorDetails: []
+  /syllabus/lessons/{lessonSlug}:
+    get:
+      tags:
+        - Syllabus
+      summary: Get syllabus lesson detail
+      description: |
+        Mengambil detail satu lesson lengkap dengan parent unit, parent track,
+        paragraf penjelasan materi, dan skill yang diperkenalkan lesson tersebut.
+      operationId: getSyllabusLessonDetail
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: lessonSlug
+          in: path
+          required: true
+          description: Slug lesson yang stabil dan unik.
+          schema:
+            type: string
+        - name: includeContentBlocks
+          in: query
+          required: false
+          description: Apakah menampilkan blok materi lesson.
+          schema:
+            type: boolean
+            default: true
+        - name: includeSkills
+          in: query
+          required: false
+          description: Apakah menampilkan list skill.
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Detail lesson berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyllabusLessonResponse'
+              example:
+                status:
+                  traceId: 550e8400-e29b-41d4-a716-446655440000
+                  code: 120004000
+                  message: Success!
+                  errorDetails: []
+                data:
+                  id: 990e8400-e29b-41d4-a716-446655440444
+                  slug: hiragana-row-a
+                  title: Hiragana Row A
+                  learningObjective: Recognize and read the first hiragana row.
+                  sortOrder: 1
+                  estimatedMinutes: 10
+                  track:
+                    id: 880e8400-e29b-41d4-a716-446655440333
+                    slug: jlpt-n5-foundation
+                    curriculumLevel: N5
+                    title: JLPT N5 Foundation
+                  unit:
+                    id: 770e8400-e29b-41d4-a716-446655440222
+                    slug: n5-kana-basics
+                    title: Kana Basics
+                    sortOrder: 1
+                  contentBlocks:
+                    - id: bb0e8400-e29b-41d4-a716-446655440666
+                      blockType: PARAGRAPH
+                      title: Core Sound Pattern
+                      body: The A-row introduces the five core vowel sounds used throughout later lessons.
+                      sortOrder: 1
+                  skills:
+                    - id: aa0e8400-e29b-41d4-a716-446655440555
+                      code: hiragana_a_row
+                      slug: hiragana-a-row
+                      curriculumLevel: N5
+                      title: Hiragana A Row
+                      description: Recognize and read the hiragana A-row characters.
+                      skillType: KANA
+                      supportsFlashcards: true
+                      supportsPracticeObjective: true
+                      supportsPracticeFreeResponse: false
+                      prerequisiteSkillCodes: []
+        '401':
+          description: Session tidak ada atau tidak valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status:
+                  traceId: 550e8400-e29b-41d4-a716-446655440000
+                  code: 140104001
+                  message: Unauthorized.
+                  errorDetails: []
+        '403':
+          description: Onboarding belum selesai.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status:
+                  traceId: 550e8400-e29b-41d4-a716-446655440000
+                  code: 140304001
+                  message: Forbidden.
+                  errorDetails: []
+        '404':
+          description: Lesson tidak ditemukan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status:
+                  traceId: 550e8400-e29b-41d4-a716-446655440000
+                  code: 140404002
+                  message: Syllabus lesson not found.
                   errorDetails: []
 components:
   securitySchemes:
@@ -416,7 +532,7 @@ components:
           type: array
           items:
             type: string
-    SyllabusLesson:
+    SyllabusLessonSummary:
       type: object
       additionalProperties: false
       required:
@@ -443,6 +559,89 @@ components:
         estimatedMinutes:
           type: integer
           nullable: true
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyllabusSkill'
+    SyllabusLessonContentBlock:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - blockType
+        - body
+        - sortOrder
+      properties:
+        id:
+          type: string
+          format: uuid
+        blockType:
+          type: string
+          enum:
+            - PARAGRAPH
+        title:
+          type: string
+          nullable: true
+        body:
+          type: string
+        sortOrder:
+          type: integer
+    SyllabusUnitSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - slug
+        - title
+        - sortOrder
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        sortOrder:
+          type: integer
+    SyllabusLessonDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - slug
+        - title
+        - learningObjective
+        - sortOrder
+        - estimatedMinutes
+        - track
+        - unit
+        - contentBlocks
+        - skills
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        learningObjective:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        estimatedMinutes:
+          type: integer
+          nullable: true
+        track:
+          $ref: '#/components/schemas/SyllabusTrackSummary'
+        unit:
+          $ref: '#/components/schemas/SyllabusUnitSummary'
+        contentBlocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyllabusLessonContentBlock'
         skills:
           type: array
           items:
@@ -497,7 +696,7 @@ components:
         lessons:
           type: array
           items:
-            $ref: '#/components/schemas/SyllabusLesson'
+            $ref: '#/components/schemas/SyllabusLessonSummary'
         unitSkills:
           type: array
           items:
@@ -513,3 +712,14 @@ components:
           $ref: '#/components/schemas/Status'
         data:
           $ref: '#/components/schemas/SyllabusUnit'
+    SyllabusLessonResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - data
+      properties:
+        status:
+          $ref: '#/components/schemas/Status'
+        data:
+          $ref: '#/components/schemas/SyllabusLessonDetail'

@@ -690,6 +690,7 @@
         "sortOrder",
         "estimatedMinutes",
         "isPublished",
+        "contentBlocks",
         "skills"
       ],
       "properties": {
@@ -719,11 +720,53 @@
         "isPublished": {
           "type": "boolean"
         },
+        "contentBlocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/lessonContentBlock"
+          }
+        },
         "skills": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/skill"
           }
+        }
+      }
+    },
+    "lessonContentBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "blockType",
+        "body",
+        "sortOrder",
+        "isPublished"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "blockType": {
+          "type": "string",
+          "enum": [
+            "PARAGRAPH"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sortOrder": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "isPublished": {
+          "type": "boolean"
         }
       }
     },

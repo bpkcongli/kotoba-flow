@@ -20,7 +20,7 @@
 - [source-of-truth-and-ingestion-plan.md](./source-of-truth-and-ingestion-plan.md)
   Menjelaskan prioritas sumber referensi, cara mengambil dataset, limitasi lisensi/format, dan aturan normalisasi sebelum data masuk ke seed content.
 - [seed-content-schema.md](./seed-content-schema.md)
-  Menjelaskan bentuk seed content yang disarankan untuk repo dan bagaimana field seed dipetakan ke tabel `tracks`, `units`, `lessons`, `skills`, dan `unit_skill_mappings`.
+  Menjelaskan bentuk seed content yang disarankan untuk repo dan bagaimana field seed dipetakan ke tabel `tracks`, `units`, `lessons`, `lesson_content_blocks`, `skills`, dan `unit_skill_mappings`.
 - [schema/](./schema/)
   Berisi JSON Schema machine-readable untuk `manifest.json` dan file track seed agar bentuk payload dapat divalidasi otomatis.
 - [examples/](./examples/)
@@ -43,6 +43,7 @@
 - Penempatan JLPT di product layer tetap menjadi keputusan internal KotobaHub, karena tidak semua source primer membawa field JLPT modern yang siap dipakai apa adanya.
 - Untuk `kanji` dan `vocabulary`, metadata JLPT boleh datang dari overlay source tambahan selama tetap ditandai sebagai `jlpt signal`, bukan langsung dianggap `curriculumLevel` final.
 - Example sentences dan vocabulary frequency tetap boleh ikut dibawa di seed content sebagai metadata, walau saat ini ERD `syllabus` belum punya tabel dedicated untuk keduanya.
+- Paragraf penjelasan materi yang menjadi bagian lesson tidak lagi dianggap metadata longgar; area ini kini diposisikan sebagai konten first-class melalui tabel `lesson_content_blocks`.
 
 ## Known Constraints
 - `KANJIDIC2` menyediakan indikator JLPT lama, bukan daftar resmi `N5 -> N1` modern.

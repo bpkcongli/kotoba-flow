@@ -155,3 +155,5 @@
 ## Documentation Note
 - Jika nanti `DS-06` ingin ikut mencerminkan seluruh practice question type yang sekarang sudah muncul pada kontrak API, wireframe low-fidelity practice dapat diperluas di task dokumentasi lanjutan.
 - Untuk saat ini, `DS-06` tetap diperlakukan sebagai baseline struktur awal, sementara `DS-08` sudah memvalidasi arah visual untuk tiga question type practice yang paling relevan dengan kontrak MVP.
+- Penambahan `lesson_content_blocks` pada domain syllabus belum sepenuhnya divisualisasikan sebagai lesson study surface tersendiri pada hi-fi saat ini.
+- Follow-up alignment design tersebut dilacak di [tech-debt-register.md](../tech-debt-register.md) item `TD-001`.
